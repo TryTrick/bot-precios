@@ -52,7 +52,15 @@ usuario = solo local (`solo_local: true` en config.yaml; se salta si `GITHUB_ACT
   monitores 07010000). `num=100` → 1 petición por categoría. Capacidad desde `fmyChipList`.
 - Ciclo real MM + Chollometro + Samsung: 75 peticiones, 134 s, 864 productos, 8 claves emparejadas
   entre tiendas en el primer ciclo (crecerá con la rotación).
-- Siguiente: PcComponentes (solo local) → Xiaomi → Apple.
+
+### PcComponentes ✅ (solo local)
+- `bot/tiendas/pccomponentes.py`: JSON-LD `ItemList` (40/pág., `offers.seller.name`) y ficha
+  `product` (`gtin13`, `itemCondition`, `offers.offers.offeredBy`). `?sort=` verificado:
+  price_asc/price_desc/sales/activation_date; `?page=N`.
+- Sin filtro de vendedor en URL; por precio ascendente solo salen externos → sin barrido:
+  ventas + novedades + 1 pág. rotación price_desc. Consolas: `videoconsolas-ps5`, `-nintendo-switch-2`
+  (xbox sin listado). Ciclo local: 27 peticiones, 54 s, ~400 productos propios.
+- Siguiente: Xiaomi → Apple.
 
 ## Fase 3 — Actions + Pages ⏳
 ## Fase 4 — Web ⏳
