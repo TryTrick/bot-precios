@@ -121,6 +121,13 @@ def test_escribir_huellas(tmp_path):
     db.cerrar()
 
 
+def test_arbol_avisos_nombre_exacto(tmp_path):
+    ruta = tmp_path / "avisos.json"
+    ruta.write_text('{"avisos": []}', encoding="utf-8")
+    arbol = compartidos.arbol_avisos(ruta)
+    assert compartidos._git("ls-tree", "--name-only", arbol) == "avisos.json"  # sin retorno de carro
+
+
 URL = "https://raw.githubusercontent.com/x/y/avisos-local/avisos.json"
 
 

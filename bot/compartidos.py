@@ -70,9 +70,15 @@ def _git(*args: str, entrada: str | None = None, timeout: int = 30) -> str:
 
 def subir_rama_local(ruta: Path) -> None:
     """Sube `avisos.json` como único commit de la rama avisos-local (sin tocar main)."""
-    blob = _git("hash-object", "-w", str(ruta))
-    arbol = _git("mktree", entrada=f"100644 blob {blob}\tavisos.json\n")
+    arbol = arbol_avisos(ruta)
     hora = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%MZ")
     commit = _git("commit-tree", arbol, "-m", f"Avisos de la tarea local {hora}")
     _git("push", "-q", "-f", "origin", f"{commit}:refs/heads/{RAMA_LOCAL}", timeout=90)
     log.info("Avisos locales subidos a la rama %s", RAMA_LOCAL)
+
+
+def arbol_avisos(ruta: Path) -> str:
+    """Árbol de git con solo `avisos.json` (sin checkout ni índice)."""
+    blob = _git("hash-object", "-w", str(ruta))
+    # -z: terminado en NUL; con "\n" Windows lo convierte en "\r\n" y el nombre acaba en "\r"
+    return _git("mktree", "-z", entrada=f"100644 blob {blob}\tavisos.json\0")
