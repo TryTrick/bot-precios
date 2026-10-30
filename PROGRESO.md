@@ -44,7 +44,15 @@ usuario = solo local (`solo_local: true` en config.yaml; se salta si `GITHUB_ACT
   para precios ≤ `barrido_hasta`. `nextBestPrice` = precio tachado (último recurso).
 - Enlace del aviso = hilo de Chollometro (la URL de la tienda no se publica). No se puede verificar
   el vendedor (nota en el email). Fuente solo-avisos vacía ≠ caída.
-- Siguiente: Samsung → Xiaomi → Apple → PcComponentes (solo local).
+
+### Samsung ✅
+- `bot/tiendas/samsung.py`: API de su buscador `searchapi.samsung.com/v6/front/b2c/product/finder/hybris`
+  (`newhybris`/`gpv2` no traen precio). `type` = `pfCategoryTypeCode` de cada página all-…
+  (móviles 01010000, tablets 01020000, relojes 01030000, audio 01040000, portátiles 03010000,
+  monitores 07010000). `num=100` → 1 petición por categoría. Capacidad desde `fmyChipList`.
+- Ciclo real MM + Chollometro + Samsung: 75 peticiones, 134 s, 864 productos, 8 claves emparejadas
+  entre tiendas en el primer ciclo (crecerá con la rotación).
+- Siguiente: PcComponentes (solo local) → Xiaomi → Apple.
 
 ## Fase 3 — Actions + Pages ⏳
 ## Fase 4 — Web ⏳

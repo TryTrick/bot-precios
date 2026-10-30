@@ -87,7 +87,7 @@ onyx cobalto marino oscuro claro natural desierto sombra lavanda menta coral cie
 movil smartphone telefono libre consola portatil tablet smartwatch reloj inteligente
 auriculares monitor gaming tarjeta grafica edition edicion version con de y para el la the
 and nuevo new reacondicionado reacondicionada seminuevo excelente muy bueno buen estado
-dual sim wifi wi-fi nfc esim galaxy gps
+dual sim wifi wi-fi nfc esim galaxy gps exclusivo online
 """.split())
 
 # Unidades/especificaciones que se eliminan antes de extraer el modelo.
