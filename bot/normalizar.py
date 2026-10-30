@@ -75,24 +75,27 @@ _FAMILIA_MARCA = {"iphone": "apple", "ipad": "apple", "macbook": "apple", "airpo
                   "galaxy": "samsung", "pixel": "google", "ps5": "sony", "ps4": "sony",
                   "playstation": "sony", "xbox": "microsoft", "geforce": "nvidia"}
 
-# Palabras de variante o familia que SÍ forman parte de la clave.
-_PALABRAS_VARIANTE = {
-    "ultra", "pro", "max", "plus", "mini", "fe", "edge", "lite", "air", "se", "fold",
-    "flip", "ti", "super", "xl", "oled", "slim", "digital", "neo", "note", "classic",
-    "iphone", "ipad", "pixel", "macbook", "watch", "buds", "airpods", "tab", "galaxy_tab",
-    "playstation", "ps5", "ps4", "switch", "xbox", "series", "rtx", "gtx", "rx", "arc",
-    "redmi", "poco", "mi", "enterprise", "active", "sport", "gt", "nord", "razr",
-    "zenbook", "vivobook", "rog", "tuf", "ideapad", "thinkpad", "legion", "yoga",
-    "omen", "victus", "pavilion", "envy", "spectre", "elitebook", "xps", "inspiron",
-    "latitude", "aspire", "swift", "nitro", "predator", "surface", "steam", "deck",
-    "portal", "quest", "fenix", "forerunner", "venu", "galaxy_watch", "studio",
-}
+# Palabras que NO forman parte de la clave: colores, nombres genéricos de
+# categoría y relleno comercial. Cualquier otra palabra del modelo cuenta, así
+# "Watch Fit 5 Pro" nunca se confunde con "Watch 5 Pro".
+_NO_MODELO = set("""
+negro negra blanco blanca azul rojo roja verde gris plata plateado oro dorado rosa morado
+violeta amarillo naranja beige crema grafito titanio titanium black white blue red green grey
+gray silver gold pink purple yellow orange midnight medianoche starlight estelar luz grafite
+onyx cobalto marino oscuro claro natural desierto sombra lavanda menta coral cielo noche
+movil smartphone telefono libre consola portatil tablet smartwatch reloj inteligente
+auriculares monitor gaming tarjeta grafica edition edicion version con de y para el la the
+and nuevo new reacondicionado reacondicionada seminuevo excelente muy bueno buen estado
+dual sim wifi wi-fi nfc esim galaxy gps
+""".split())
 
 # Unidades/especificaciones que se eliminan antes de extraer el modelo.
 _RUIDO = re.compile(
-    r"\b\d+([.,]\d+)?\s?(mah|hz|mp|w|mm|ghz|nm|cm|kg|g|pulgadas|\"|''|”)(?=\W|$)|"
-    r"\b[345]g\b|\blte\b|\bwi-?fi\b|\bdual sim\b|\besim\b|\bnfc\b|\b202\d\b"
+    r"\b\d+([.,]\d+)?\s?(mah|hz|mp|w|mm|ghz|nm|cm|kg|pulgadas|\"|''|”)(?=\W|$)|"
+    r"\b\d{2,4}\s?g\b|\blte\b|\b202\d\b"  # gramos, pero no "5G"
 )
+_MM_RELOJ = re.compile(r"\b(\d{2})\s?mm\b")
+_LTE_RELOJ = re.compile(r"\b(lte|4g|cel|cellular|celular|gps\s?\+\s?cel\w*)\b")
 _CAPACIDAD = re.compile(r"\b(\d+)\s?(gb|tb)\b")
 _CAPACIDAD_BARRA = re.compile(r"\b(\d+)\s?(?:gb)?\s?/\s?(\d+)\s?(gb|tb)\b")
 _PULGADAS = re.compile(r"\b(\d{2}(?:[.,]\d)?)\s?(?:\"|''|”|pulgadas|\bpulg\b)")
@@ -149,16 +152,12 @@ def clave_producto(titulo: str, categoria: str, marca: str | None = None) -> str
     t_limpio = _CAPACIDAD_BARRA.sub(" ", _cabecera(t))
     t_limpio = _CAPACIDAD.sub(" ", t_limpio)
     t_limpio = _RUIDO.sub(" ", t_limpio)
-    t_limpio = t_limpio.replace("galaxy tab", "galaxy_tab").replace("galaxy watch", "galaxy_watch")
 
     modelo: set[str] = set()
     for tok in _TOKEN.findall(t_limpio):
-        if tok in MARCAS or tok in _ALIAS_MARCA or tok == "galaxy":
-            if tok in _PALABRAS_VARIANTE:  # p. ej. "redmi", "poco" distinguen familia
-                modelo.add(tok)
-            continue
-        if tok in _PALABRAS_VARIANTE or any(c.isdigit() for c in tok):
-            modelo.add(tok)
+        if tok in _NO_MODELO or (tok in MARCAS and tok not in _ALIAS_MARCA):
+            continue  # la marca va aparte; las submarcas (redmi, poco) sí distinguen
+        modelo.add(tok)
     if not any(any(c.isdigit() for c in tok) for tok in modelo):
         return None  # sin número de modelo no hay forma fiable de emparejar
 
@@ -167,6 +166,9 @@ def clave_producto(titulo: str, categoria: str, marca: str | None = None) -> str
         return None
     if categoria == "monitores" and pulgadas:
         capacidad = pulgadas[0].replace(",", ".") + "in"
+    if categoria == "relojes":  # la variante es el tamaño de caja y si lleva LTE
+        tam = _MM_RELOJ.findall(t)
+        capacidad = (f"{tam[0]}mm" if tam else "") + ("-lte" if _LTE_RELOJ.search(t) else "")
     return "|".join([categoria, marca_n, "-".join(sorted(modelo)), capacidad])
 
 
@@ -184,7 +186,7 @@ def _capacidad_por_categoria(categoria: str, caps: list[int]) -> str | None:
     if categoria == "graficas":
         vram = [c for c in caps if c <= 48]
         return f"{max(vram)}gb" if vram else None
-    if categoria in ("consolas", "relojes"):
+    if categoria == "consolas":
         return f"{max(caps)}gb" if caps else ""
     return ""  # auriculares, monitores
 

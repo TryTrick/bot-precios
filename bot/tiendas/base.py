@@ -12,8 +12,9 @@ class Tienda(ABC):
     nombre_visible: str = ""    # lo que se muestra en la web y en los emails
     solo_avisos: bool = False   # True = fuente de avisos (Chollometro), no va al buscador
 
-    def __init__(self, http: Cliente):
+    def __init__(self, http: Cliente, cfg: dict | None = None):
         self.http = http
+        self.cfg = cfg or {}
 
     @abstractmethod
     async def listar(self, categorias: list[str]) -> list[Oferta]:

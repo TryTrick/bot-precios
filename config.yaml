@@ -25,15 +25,23 @@ tienda_rota:
   ciclos_fallidos: 3      # fallos (o 0 productos) seguidos antes de avisar
   horas_entre_emails: 24  # como mucho un email por tienda en este periodo
 
+rastreo:
+  # Los listados se recorren por precio ascendente hasta superar este precio, así se ven
+  # todos los productos que podrían disparar el aviso en modo precio_final.
+  barrido_hasta: 330
+  max_paginas_barrido: 15   # por categoría y ciclo (MediaMarkt: 12 productos/página)
+  paginas_rotacion: 1       # páginas extra del resto del catálogo por categoría y ciclo
+
 # Categorías vigiladas (los nombres internos se usan en cada tienda)
 categorias: [moviles, portatiles, tablets, relojes, auriculares, consolas, graficas, monitores]
 
 # Tiendas activas. Poner activa: false para desactivar una sin tocar código.
+# solo_local: true = se salta en GitHub Actions (la tienda bloquea las IPs de GitHub).
 tiendas:
-  pccomponentes: {activa: true}
+  pccomponentes: {activa: true, solo_local: true}
   mediamarkt: {activa: true}
   chollometro: {activa: true}
   samsung: {activa: true}
-  amazon: {activa: true}
+  amazon: {activa: false}   # 503 anti-robot; se cubre con Chollometro
   apple: {activa: false}
   xiaomi: {activa: false}

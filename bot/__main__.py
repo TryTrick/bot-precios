@@ -11,6 +11,7 @@ from __future__ import annotations
 import argparse
 import asyncio
 import logging
+import os
 import sys
 import time
 from datetime import date, timedelta
@@ -40,11 +41,13 @@ def _logging() -> None:
 async def _ciclo(args, cfg: dict) -> int:
     inicio = time.monotonic()
     registro = cargar_todas()
-    activas = [n for n, t in cfg["tiendas"].items() if t.get("activa") and n in registro]
+    en_actions = os.environ.get("GITHUB_ACTIONS") == "true"
+    activas = [n for n, t in cfg["tiendas"].items()
+               if t.get("activa") and n in registro and not (en_actions and t.get("solo_local"))]
     if args.solo:
         activas = [n for n in args.solo.split(",") if n in registro]
     http = Cliente(cfg["red"])
-    tiendas = [registro[n](http) for n in activas]
+    tiendas = [registro[n](http, cfg) for n in activas]
     db = Historial(args.db)
     try:
         log.info("Ciclo con %d tiendas: %s", len(tiendas), ", ".join(activas) or "(ninguna)")

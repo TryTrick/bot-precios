@@ -17,9 +17,9 @@ class Simulada(Tienda):
     nombre = "simulada"
     nombre_visible = "Tienda simulada (PRUEBA)"
 
-    def __init__(self, http=None, ofertas: list[Oferta] | None = None,
+    def __init__(self, http=None, cfg: dict | None = None, ofertas: list[Oferta] | None = None,
                  fichas: dict[str, Oferta | None] | None = None):
-        super().__init__(http)
+        super().__init__(http, cfg)
         self._ofertas = ofertas if ofertas is not None else [oferta_falsa()]
         self._fichas = fichas
 

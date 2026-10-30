@@ -23,9 +23,18 @@ con `marketplaceSeller`/`onlineStatus`).
 - Leer resultado de un run: `GET /repos/TryTrick/bot-precios/actions/runs?head_sha=<sha>` →
   jobs → `check-runs/<id>/annotations` (sin token).
 
-## Fase 2 — Tiendas ⏳
-Orden revisado: MediaMarkt → Chollometro → Samsung → Xiaomi → Apple; PcComponentes según decisión
-del usuario (solo funciona en local).
+## Fase 2 — Tiendas 🟡
+### MediaMarkt ✅
+- `bot/tiendas/mediamarkt.py`: parsea `__PRELOADED_STATE__` (Apollo) en listado y ficha; EAN en el
+  100 % de productos. Filtro `?marketplace=MediaMarkt`; `sort=currentprice asc` barrido hasta
+  `rastreo.barrido_hasta` (330 €, máx. 15 págs.) + 1 pág. de rotación `currentprice desc`.
+  12 productos/pág., máx. 30 págs. Categorías del sitemap oficial.
+- Sin gráficas: las 470 son de marketplace. Ciclo real: 66 peticiones, 688 productos, 137 s.
+- Fixtures recortados (solo entradas que usa el parser) + 6 tests (respx para paginación).
+- Cambio en `clave_producto`: conserva todas las palabras del modelo salvo `_NO_MODELO`
+  (colores, genéricas); relojes por tamaño mm + LTE; "5G" distingue modelos.
+Orden revisado: MediaMarkt → Chollometro → Samsung → Xiaomi → Apple; PcComponentes: decisión del
+usuario = solo local (`solo_local: true` en config.yaml; se salta si `GITHUB_ACTIONS=true`).
 
 ## Fase 3 — Actions + Pages ⏳
 ## Fase 4 — Web ⏳

@@ -14,5 +14,5 @@ def registrar(cls: type[Tienda]) -> type[Tienda]:
 
 def cargar_todas() -> dict[str, type[Tienda]]:
     # Importar los módulos ejecuta su @registrar
-    from . import simulada  # noqa: F401
+    from . import mediamarkt, simulada  # noqa: F401
     return REGISTRO

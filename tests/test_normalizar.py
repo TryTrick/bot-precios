@@ -78,3 +78,21 @@ def test_grafica():
     assert (clave_producto("MSI GeForce RTX 5070 12GB", "graficas")
             != clave_producto("MSI GeForce RTX 5070 Ti 16GB", "graficas"))
     assert clave_producto("MSI GeForce RTX 5070 Ti Ventus 3X 16GB GDDR7", "graficas").endswith("|16gb")
+
+
+def test_palabras_desconocidas_distinguen():
+    assert (clave_producto("Huawei Watch Fit 5 Pro, 46mm", "relojes")
+            != clave_producto("Huawei Watch 5 Pro, 46 mm", "relojes"))
+
+
+def test_5g_distingue():
+    assert (clave_producto("Xiaomi Redmi 15C 5G, Verde, 128GB", "moviles")
+            != clave_producto("Xiaomi Redmi 15C, Verde, 128GB", "moviles"))
+
+
+def test_reloj_tamano_y_lte():
+    lte44 = clave_producto("Apple Watch SE 3 (2026), GPS+CEL, 44 mm, Caja de aluminio", "relojes")
+    gps44 = clave_producto("Apple Watch SE 3 GPS 44mm Caja de aluminio", "relojes")
+    gps40 = clave_producto("Apple Watch SE 3, GPS, 40 mm", "relojes")
+    assert lte44.endswith("|44mm-lte") and gps44.endswith("|44mm") and gps40.endswith("|40mm")
+    assert len({lte44, gps44, gps40}) == 3
