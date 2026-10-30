@@ -1,0 +1,13 @@
+# Diagnóstico manual: comprueba qué tiendas responden desde las IPs de GitHub.
+name: sonda
+on: workflow_dispatch
+permissions:
+  contents: read
+jobs:
+  sonda:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - run: uv run python -m bot sonda

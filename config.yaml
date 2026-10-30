@@ -1,0 +1,39 @@
+# Configuración del bot. Se puede cambiar sin tocar código.
+
+aviso:
+  # Modo activo: "precio_final" o "porcentaje"
+  modo: precio_final
+  precio_final:
+    referencia_min: 700   # el producto debe valer normalmente al menos esto (€)
+    precio_max: 330       # y aparecer a este precio o menos (€)
+  porcentaje:
+    caida_min: 50         # % mínimo de caída respecto a la referencia
+
+referencia:
+  dias: 30                # ventana del historial para las medianas
+  min_dias_propios: 3     # días de historial propio necesarios para usarlo
+
+red:
+  concurrencia_global: 4
+  concurrencia_por_tienda: 1
+  pausa_min: 1.0          # segundos entre peticiones a la misma tienda
+  pausa_max: 3.0
+  timeout: 20
+  reintentos: 2
+
+tienda_rota:
+  ciclos_fallidos: 3      # fallos (o 0 productos) seguidos antes de avisar
+  horas_entre_emails: 24  # como mucho un email por tienda en este periodo
+
+# Categorías vigiladas (los nombres internos se usan en cada tienda)
+categorias: [moviles, portatiles, tablets, relojes, auriculares, consolas, graficas, monitores]
+
+# Tiendas activas. Poner activa: false para desactivar una sin tocar código.
+tiendas:
+  pccomponentes: {activa: true}
+  mediamarkt: {activa: true}
+  chollometro: {activa: true}
+  samsung: {activa: true}
+  amazon: {activa: true}
+  apple: {activa: false}
+  xiaomi: {activa: false}
