@@ -87,7 +87,7 @@ negro negra blanco blanca azul rojo roja verde gris plata plateado oro dorado ro
 violeta amarillo naranja beige crema grafito titanio titanium black white blue red green grey
 gray silver gold pink purple yellow orange midnight medianoche starlight estelar luz grafite
 onyx cobalto marino oscuro claro natural desierto sombra lavanda menta coral cielo noche
-movil smartphone telefono libre consola portatil tablet smartwatch reloj inteligente
+movil smartphone telefono libre camara consola portatil tablet smartwatch reloj inteligente
 auriculares monitor gaming tarjeta grafica edition edicion version con de y para el la the
 and nuevo new reacondicionado reacondicionada seminuevo excelente muy bueno buen estado
 dual sim wifi wi-fi nfc esim galaxy gps exclusivo online 5g 4g
@@ -96,7 +96,8 @@ dual sim wifi wi-fi nfc esim galaxy gps exclusivo online 5g 4g
 # Unidades/especificaciones que se eliminan antes de extraer el modelo.
 _RUIDO = re.compile(
     r"\b\d+([.,]\d+)?\s?(mah|hz|mp|w|mm|ghz|nm|cm|kg|pulgadas|\"|''|”)(?=\W|$)|"
-    r"\b\d{2,4}\s?g\b|\blte\b|\b202\d\b"  # gramos, pero no "5G"
+    r"\b\d{2,4}\s?g\b|\blte\b|\b202\d\b|"  # gramos, pero no "5G"
+    r"\bs pen (?:integrado|incluido)\b"
 )
 _MM_RELOJ = re.compile(r"\b(\d{2})\s?mm\b")
 _LTE_RELOJ = re.compile(r"\b(lte|4g|cel|cellular|celular|gps\s?\+\s?cel\w*)\b")
@@ -125,7 +126,8 @@ def _cabecera(t: str) -> str:
         antes, despues = t.split(" - ", 1)
         if not any(tok in MARCAS or tok in _ALIAS_MARCA for tok in _TOKEN.findall(antes)):
             t = despues
-    t = re.split(r"[,|(\[]", t, maxsplit=1)[0]
+    # La coma decimal (6,9") no corta: es parte de una especificación, no un separador
+    t = re.split(r"(?<!\d),|,(?!\d)|[|(\[]", t, maxsplit=1)[0]
     t = re.sub(r"(?<=[a-z0-9])\+", " plus", t)  # "S25+" -> "S25 plus"
     return t.replace("playstation 5", "ps5").replace("playstation 4", "ps4")
 

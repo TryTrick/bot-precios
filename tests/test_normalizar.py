@@ -46,6 +46,17 @@ def test_misma_clave_entre_tiendas():
     assert pcc == mm == amz == "moviles|samsung|s25-ultra|256gb"
 
 
+def test_coma_decimal_y_relleno_de_pccomponentes():
+    # Títulos reales de PcComponentes: la coma de 6,9" no corta el modelo y
+    # «S Pen integrado» / «Cámara 200 MP» no son parte de él.
+    assert clave_producto('Samsung Galaxy S25 Ultra 5G 12GB 1TB 6,9" Negro Titanio S Pen '
+                          'integrado', "moviles") == "moviles|samsung|s25-ultra|1024gb"
+    assert clave_producto('Samsung Galaxy S24 Ultra 5G 12GB 256GB Gris Titanio 6,8" Cámara '
+                          '200 MP', "moviles") == "moviles|samsung|s24-ultra|256gb"
+    assert (clave_producto("Samsung Galaxy S26 Ultra, Violeta, 1 TB, 16 GB RAM", "moviles")
+            == "moviles|samsung|s26-ultra|1024gb")
+
+
 @pytest.mark.parametrize("a,b", [
     ("Samsung Galaxy S25 256GB", "Samsung Galaxy S25 Ultra 256GB"),
     ("Samsung Galaxy S25 Ultra 256GB", "Samsung Galaxy S25 Ultra 512GB"),
