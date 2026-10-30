@@ -103,6 +103,30 @@ class Historial:
             (o.tienda, o.id_tienda, dia, o.precio),
         )
 
+    def exportar_tienda(self, tienda: str, visto_desde: str, dias_desde: str) -> list[dict]:
+        """Productos de una tienda vistos desde `visto_desde`, con sus precios diarios."""
+        filas = []
+        for p in self.con.execute("SELECT * FROM productos WHERE tienda=? AND ultima_vez>=?",
+                                  (tienda, visto_desde)):
+            fila = dict(p)
+            fila["dias"] = dict(self.con.execute(
+                "SELECT dia, precio FROM precios_diarios WHERE tienda=? AND id_tienda=? "
+                "AND dia>=?", (tienda, p["id_tienda"], dias_desde)).fetchall())
+            filas.append(fila)
+        return filas
+
+    def importar(self, fila: dict) -> None:
+        """Copia un producto exportado por otra ejecución tal cual (con su hora real)."""
+        columnas = [r[1] for r in self.con.execute("PRAGMA table_info(productos)")]
+        valores = [fila.get(c) for c in columnas]
+        self.con.execute(
+            f"INSERT OR REPLACE INTO productos ({','.join(columnas)}) "
+            f"VALUES ({','.join('?' * len(columnas))})", valores)
+        self.con.executemany(
+            "INSERT OR REPLACE INTO precios_diarios VALUES (?,?,?,?)",
+            [(fila["tienda"], fila["id_tienda"], dia, precio)
+             for dia, precio in (fila.get("dias") or {}).items()])
+
     def precios_tienda(self, tienda: str, id_tienda: str, desde: str,
                        hasta_excluido: str | None = None) -> list[float]:
         sql = "SELECT precio FROM precios_diarios WHERE tienda=? AND id_tienda=? AND dia>=?"

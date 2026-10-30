@@ -54,6 +54,9 @@ class Cliente:
         async with sem, self._global:
             for intento in range(1, intentos + 1):
                 await self._pausa(host)
+                # Otra vez aquí: las peticiones que ya esperaban turno cuando llegó el bloqueo
+                if host in self._bloqueados:
+                    raise Bloqueado(f"{self._bloqueados[host]} (sin más peticiones en este ciclo)")
                 try:
                     self.peticiones += 1
                     r = await self._http.get(url, params=params, headers=cabeceras)

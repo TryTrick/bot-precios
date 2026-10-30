@@ -104,7 +104,11 @@ usuario = solo local (`solo_local: true` en config.yaml; se salta si `GITHUB_ACT
   tarea local en la rama `avisos-local` (solo si avisa). Cada lado lee las del otro antes de
   avisar. Mismo chollo = misma tienda + (misma clave sin bajar >2 %, o misma categoría y precio ±2 %),
   72 h. Límite: si ambos lo detectan en el mismo cuarto de hora pueden llegar dos.
-- La opción C (subir los datos de PcComponentes a la web) queda para más adelante.
+- Opción C ✅: la tarea local sube en cada ejecución `tiendas_locales.json` (productos de las
+  últimas 48 h con 30 días de historial) y `avisos.json` a la rama `datos-local` (sustituye a
+  `avisos-local`). Actions los importa antes del ciclo (clave recalculada): web y referencias.
+- Arreglado: tras un bloqueo, las peticiones que ya esperaban turno salían igualmente (8 × 403
+  en un ciclo). Ahora se comprueba justo antes de cada petición; test con respuesta lenta.
 
 ## Fase 5 — Verificación ✅ (30/10/2026)
 - Tarea local con prioridad baja (Priority 9 + modo segundo plano de Windows: E/S «muy baja»,

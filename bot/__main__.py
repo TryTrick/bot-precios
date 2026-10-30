@@ -60,26 +60,42 @@ async def _ciclo(args, cfg: dict, solo_local: bool = False) -> int:
             return 0
         log.warning("No se pudieron leer los avisos compartidos: %s", e)
         externos = []
+    datos_locales = None
+    if en_actions:  # lo que publicó la tarea local (PcComponentes)
+        try:
+            datos_locales = await compartidos.leer_json(http, comp["url_locales"])
+        except compartidos.SinConexion as e:
+            log.warning("No se pudieron leer las tiendas locales: %s", e)
+    locales = [n for n in activas if cfg["tiendas"][n].get("solo_local")]
     tiendas = [registro[n](http, cfg) for n in activas]
+    carpeta = Path(args.db).parent
     db = Historial(args.db)
     try:
+        estado_locales = compartidos.importar_locales(db, datos_locales)
         log.info("Ciclo con %d tiendas: %s (%d avisos externos recientes)", len(tiendas),
                  ", ".join(activas) or "(ninguna)", len(externos))
         resumen = await ejecutar(cfg, db, tiendas, externos=externos)
         estado = [{"tienda": r.tienda, "ok": r.ok, "productos": r.productos}
-                  for r in resumen.tiendas]
-        nombres = {t.nombre: t.nombre_visible for t in tiendas}
+                  for r in resumen.tiendas] + estado_locales
+        nombres = {n: t.nombre_visible for n, t in registro.items()}
         n = exportar.escribir(db, nombres, Path(args.salida), estado)
-        ruta_avisos = Path(args.db).parent / "avisos.json"
-        compartidos.escribir(db, ruta_avisos, avisos.HORAS_HUELLA)
+        archivos = [carpeta / "avisos.json"]
+        compartidos.escribir(db, archivos[0], avisos.HORAS_HUELLA)
+        if locales and not en_actions:
+            archivos.append(carpeta / "tiendas_locales.json")
+            compartidos.escribir_locales(
+                db, archivos[1], {r.tienda: {"ok": r.ok, "productos": r.productos}
+                                  for r in resumen.tiendas if r.tienda in locales},
+                cfg["referencia"]["dias"])
     finally:
         db.cerrar()
         await http.cerrar()
-    if resumen.avisos_enviados and not en_actions:
-        try:  # que Actions no repita este aviso por Chollometro
-            compartidos.subir_rama_local(ruta_avisos)
+    if not en_actions and (locales or resumen.avisos_enviados):
+        try:  # para la web y para que Actions no repita estos avisos por Chollometro
+            compartidos.subir_rama_local(archivos)
         except Exception as e:
-            log.error("No se pudieron subir los avisos locales (puede llegar un duplicado): %s", e)
+            log.error("No se pudieron subir los datos locales (la web no tendrá PcComponentes "
+                      "al día y puede llegar un aviso duplicado): %s", e)
     caidas = [r.tienda for r in resumen.tiendas if not r.ok]
     _resumen_actions(resumen, http.peticiones, time.monotonic() - inicio)
     log.info("Fin del ciclo en %.1fs: %d peticiones, %d variantes publicadas, "

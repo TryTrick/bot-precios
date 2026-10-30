@@ -10,7 +10,8 @@ Plan aprobado: `C:\Users\llove\.claude\plans\pasted-content-id-1aad-vas-a-twinkl
 - Alerta simulada (email real con [PRUEBA]): `uv run python -m bot ciclo --simular-alerta`
 - Email de prueba: `uv run python -m bot test-email`
 - Tarea local (PcComponentes, sin ventana): `uv run python -m bot tarea-local`; se instala con
-  `scripts/instalar_tarea.ps1` (tarea de Windows `bot-precios-local`, log `datos/tarea_local.log`)
+  `scripts/instalar_tarea.ps1` (tarea de Windows `bot-precios-local`, log `datos/tarea_local.log`); publica en la rama
+  `datos-local` lo que Actions importa para la web (`bot/compartidos.py`)
 
 ## Convenciones
 - Código, comentarios, logs y mensajes en español. Python 3.12, async con httpx, parser selectolax.

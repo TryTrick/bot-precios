@@ -1,4 +1,5 @@
 """Tarea local: bloqueos sin reintento, avisos compartidos sin duplicados, batería y cerrojo."""
+import asyncio
 import json
 import sqlite3
 import subprocess
@@ -9,7 +10,7 @@ import httpx
 import pytest
 import respx
 
-from bot import avisos, compartidos, correo
+from bot import avisos, compartidos, correo, exportar
 from bot.ciclo import ejecutar
 from bot.db import Historial
 from bot.http import Bloqueado, Cliente
@@ -54,6 +55,23 @@ async def test_bloqueo_no_reintenta_ni_vuelve_a_pedir():
     with pytest.raises(Bloqueado, match="sin más peticiones"):
         await http.get("https://www.pccomponentes.com/categorias/portatiles")
     assert ruta.call_count == 1  # ni reintento ni segunda petición
+    await http.cerrar()
+
+
+@respx.mock
+async def test_bloqueo_corta_tambien_las_que_esperaban_turno():
+    # Como en PcComponentes: todas las categorías se lanzan a la vez y esperan turno
+    async def respuesta_lenta(request):  # como la red real: mientras, las demás hacen cola
+        await asyncio.sleep(0.01)
+        return httpx.Response(403)
+
+    ruta = respx.get(url__startswith="https://www.pccomponentes.com/").mock(
+        side_effect=respuesta_lenta)
+    http = Cliente(RED)
+    urls = [f"https://www.pccomponentes.com/categorias/{n}" for n in range(8)]
+    res = await asyncio.gather(*(http.get(u) for u in urls), return_exceptions=True)
+    assert all(isinstance(r, Bloqueado) for r in res)
+    assert ruta.call_count == 1
     await http.cerrar()
 
 
@@ -123,14 +141,56 @@ def test_escribir_huellas(tmp_path):
     db.cerrar()
 
 
-def test_arbol_avisos_nombre_exacto(tmp_path):
-    ruta = tmp_path / "avisos.json"
-    ruta.write_text('{"avisos": []}', encoding="utf-8")
-    arbol = compartidos.arbol_avisos(ruta)
-    assert compartidos._git("ls-tree", "--name-only", arbol) == "avisos.json"  # sin retorno de carro
+def test_arbol_nombres_exactos(tmp_path):
+    for nombre in ("avisos.json", "tiendas_locales.json"):
+        (tmp_path / nombre).write_text("{}", encoding="utf-8")
+    arbol = compartidos.arbol_de([tmp_path / "tiendas_locales.json", tmp_path / "avisos.json"])
+    # sin retorno de carro al final del nombre
+    assert compartidos._git("ls-tree", "--name-only", arbol).split("\n") == [
+        "avisos.json", "tiendas_locales.json"]
 
 
-URL = "https://raw.githubusercontent.com/x/y/avisos-local/avisos.json"
+# --- tiendas locales (PcComponentes) en la web -----------------------------------------
+
+def test_locales_viajan_a_la_web_con_su_hora_y_su_historial(tmp_path, cfg):
+    local = Historial(":memory:")
+    pcc = oferta(id_tienda="S25U", precio=1724.51, url="https://www.pccomponentes.com/s25u")
+    sembrar(local, pcc, CLAVE, 1799, dias=4)
+    local.guardar(pcc, CLAVE)
+    local.guardar(oferta(id_tienda="VIEJO", visto="2026-01-01T00:00:00+00:00"), CLAVE)
+    ruta = tmp_path / "tiendas_locales.json"
+    n = compartidos.escribir_locales(local, ruta, {"pccomponentes": {"ok": True, "productos": 1}},
+                                     30)
+    assert n == 1  # el no visto en 48 h no viaja
+
+    actions = Historial(":memory:")
+    estado = compartidos.importar_locales(actions, json.loads(ruta.read_text(encoding="utf-8")))
+    assert estado == [{"tienda": "pccomponentes", "ok": True, "productos": 1}]
+    web = exportar.construir(actions, {"pccomponentes": "PcComponentes"})
+    fila = next(v["n"] for v in web["variantes"] if "s25" in v["k"].split())
+    assert (fila["s"], fila["p"], fila["u"]) == ("PcComponentes", 1724.51,
+                                                 "https://www.pccomponentes.com/s25u")
+    assert fila["v"] == pcc.visto  # hora real de la lectura local, no la de Actions
+    assert len(actions.precios_tienda("pccomponentes", "S25U", "2000-01-01")) == 5
+
+
+def test_importar_recalcula_la_clave(db):
+    fila = {"tienda": "pccomponentes", "id_tienda": "1", "url": "u", "categoria": "moviles",
+            "estado": "nuevo", "precio": 1724.51, "en_stock": 1, "clave": "moviles|samsung|vieja|1gb",
+            "titulo": 'Samsung Galaxy S25 Ultra 5G 12GB 1TB 6,9" Negro Titanio S Pen integrado',
+            "primera_vez": "2026-10-30T00:00:00+00:00", "ultima_vez": "2026-10-30T00:00:00+00:00"}
+    compartidos.importar_locales(db, {"generado": "", "tiendas": {}, "productos": [fila]})
+    assert db.todos_productos()[0]["clave"] == "moviles|samsung|s25-ultra|1024gb"
+
+
+def test_locales_antiguos_salen_como_caidos(db):
+    datos = {"generado": "2026-01-01T00:00:00+00:00", "productos": [],
+             "tiendas": {"pccomponentes": {"ok": True, "productos": 300}}}
+    assert compartidos.importar_locales(db, datos)[0]["ok"] is False
+    assert compartidos.importar_locales(db, None) == []
+
+
+URL = "https://raw.githubusercontent.com/x/y/datos-local/avisos.json"
 
 
 @respx.mock

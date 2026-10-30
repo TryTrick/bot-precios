@@ -48,7 +48,7 @@ cron */15 (GitHub Actions)
 | Samsung (tienda oficial) | ✅ | API del buscador de su web |
 | Apple (tienda oficial) | ✅ iPhone e iPad | Datos de las páginas de compra |
 | Xiaomi (tienda oficial) | ⚠️ parcial | Solo el precio «desde» de cada familia |
-| PcComponentes | ✅ solo desde tu PC | JSON-LD de los listados (bloquea las IPs de GitHub) |
+| PcComponentes | ✅ leída desde tu PC | JSON-LD de los listados (bloquea las IPs de GitHub); sale en la web |
 | Chollometro | ✅ solo avisos | RSS de nuevos y populares, filtrado por tiendas fiables |
 | Amazon, El Corte Inglés, Fnac, Worten, Carrefour, Back Market | ❌ | Protección anti-bot; solo llegan a través de Chollometro |
 
@@ -141,8 +141,15 @@ Crea la tarea `bot-precios-local` del Programador de tareas, con este comportami
 - Para pausarla: Programador de tareas → `bot-precios-local` → Deshabilitar. Para quitarla:
   `Unregister-ScheduledTask -TaskName bot-precios-local -Confirm:$false`.
 
-Sus avisos se suben a la rama `avisos-local`, para que Actions no repita el mismo chollo si
-aparece también en Chollometro. Sus precios **no** salen en la web.
+En cada ejecución sube a la rama `datos-local` dos archivos:
+- `tiendas_locales.json`: los productos de PcComponentes vistos en las últimas 48 h, con su
+  historial de 30 días. Actions los importa en cada ciclo: salen en la web con la hora real
+  de la lectura y sirven de referencia para las demás tiendas.
+- `avisos.json`: sus avisos, para que Actions no repita el mismo chollo si aparece también en
+  Chollometro.
+
+Si tu PC lleva más de 2 horas sin publicar, el pie de la web muestra PcComponentes como «sin
+datos». Si lleva más de 48 horas, sus ofertas dejan de mostrarse.
 
 ## Limitaciones
 
@@ -150,8 +157,11 @@ aparece también en Chollometro. Sus precios **no** salen en la web.
   Carrefour y Back Market (Cloudflare); y Amazon (página anti-robot). No se intenta saltar
   esas protecciones. De ellas solo llegan los avisos que alguien publique en Chollometro.
 - **Hay muy pocos reacondicionados**, porque Back Market es una de las bloqueadas.
-- **PcComponentes solo funciona con tu PC encendido** y la sesión iniciada. No aparece en la
-  web ni sirve de referencia para las demás tiendas en Actions.
+- **PcComponentes depende de tu PC**: solo se actualiza con el PC encendido y la sesión
+  iniciada. Sus precios en la web pueden tener hasta 30 minutos más de retraso que los demás.
+  Los avisos de PcComponentes los manda tu PC, no Actions. Desde tu IP doméstica también ha
+  respondido 403 alguna vez: el bot se detiene en la primera respuesta y lo vuelve a intentar
+  al cabo de 30 minutos.
 - **Chollometro**: no se puede comprobar si el chollo lo vende la tienda o un vendedor externo.
   El enlace lleva al hilo, no al producto. Su RSS solo cubre la última hora, más o menos.
 - **MediaMarkt** no vende ninguna tarjeta gráfica directamente (todas son de vendedores
@@ -163,8 +173,8 @@ aparece también en Chollometro. Sus precios **no** salen en la web.
 - **Apple** no da stock por variante. **Samsung** enlaza a la página del modelo, donde se elige
   la capacidad, no a la variante exacta.
 - **Productos que ya no venden**: el buscador solo muestra lo que las tiendas vigiladas venden
-  ahora. Hoy (30/10/2026), «samsung s25 ultra» no da resultados en la web, porque Samsung y
-  MediaMarkt ya solo venden el S26 Ultra; solo lo tiene PcComponentes (local).
+  ahora. Hoy (30/10/2026), Samsung y MediaMarkt ya solo venden el S26 Ultra; el S25 Ultra
+  solo lo tiene PcComponentes.
 - **Productos nuevos**: si un producto se estrena con un error de precio y no hay historial
   en ninguna tienda, solo queda el precio tachado como referencia. Si no lo hay, no hay aviso.
   Los primeros días tras la puesta en marcha hay menos referencias.
