@@ -5,6 +5,7 @@
     python -m bot ciclo --simular-alerta # inyecta un error de precio falso y manda el email
     python -m bot test-email             # email de prueba simple
     python -m bot sonda                  # qué tiendas responden desde esta IP
+    python -m bot tarea-local            # tiendas solo_local (lo lanza el Programador de tareas)
 """
 from __future__ import annotations
 
@@ -17,7 +18,7 @@ import time
 from datetime import date, timedelta
 from pathlib import Path
 
-from . import correo, exportar, normalizar, sonda
+from . import avisos, compartidos, correo, exportar, normalizar, sonda, tarea_local
 from .ciclo import ejecutar
 from .config import RAIZ, cargar_config, cargar_env
 from .db import Historial
@@ -38,27 +39,47 @@ def _logging() -> None:
     logging.getLogger("httpx").setLevel(logging.WARNING)
 
 
-async def _ciclo(args, cfg: dict) -> int:
+async def _ciclo(args, cfg: dict, solo_local: bool = False) -> int:
     inicio = time.monotonic()
     registro = cargar_todas()
     en_actions = os.environ.get("GITHUB_ACTIONS") == "true"
     activas = [n for n, t in cfg["tiendas"].items()
                if t.get("activa") and n in registro and not (en_actions and t.get("solo_local"))]
+    if solo_local:
+        activas = [n for n in activas if cfg["tiendas"][n].get("solo_local")]
     if args.solo:
         activas = [n for n in args.solo.split(",") if n in registro]
     http = Cliente(cfg["red"])
+    comp = cfg["avisos_compartidos"]
+    try:  # avisos que ya mandó la otra ejecución (Actions <-> local)
+        externos = await compartidos.leer(http, comp["url_local" if en_actions else "url_actions"])
+    except compartidos.SinConexion as e:
+        if solo_local:
+            log.warning("Sin conexión (%s): se salta este ciclo", e)
+            await http.cerrar()
+            return 0
+        log.warning("No se pudieron leer los avisos compartidos: %s", e)
+        externos = []
     tiendas = [registro[n](http, cfg) for n in activas]
     db = Historial(args.db)
     try:
-        log.info("Ciclo con %d tiendas: %s", len(tiendas), ", ".join(activas) or "(ninguna)")
-        resumen = await ejecutar(cfg, db, tiendas)
+        log.info("Ciclo con %d tiendas: %s (%d avisos externos recientes)", len(tiendas),
+                 ", ".join(activas) or "(ninguna)", len(externos))
+        resumen = await ejecutar(cfg, db, tiendas, externos=externos)
         estado = [{"tienda": r.tienda, "ok": r.ok, "productos": r.productos}
                   for r in resumen.tiendas]
         nombres = {t.nombre: t.nombre_visible for t in tiendas}
         n = exportar.escribir(db, nombres, Path(args.salida), estado)
+        ruta_avisos = Path(args.db).parent / "avisos.json"
+        compartidos.escribir(db, ruta_avisos, avisos.HORAS_HUELLA)
     finally:
         db.cerrar()
         await http.cerrar()
+    if resumen.avisos_enviados and not en_actions:
+        try:  # que Actions no repita este aviso por Chollometro
+            compartidos.subir_rama_local(ruta_avisos)
+        except Exception as e:
+            log.error("No se pudieron subir los avisos locales (puede llegar un duplicado): %s", e)
     caidas = [r.tienda for r in resumen.tiendas if not r.ok]
     _resumen_actions(resumen, http.peticiones, time.monotonic() - inicio)
     log.info("Fin del ciclo en %.1fs: %d peticiones, %d variantes publicadas, "
@@ -103,6 +124,27 @@ async def _simular(cfg: dict) -> int:
     return 1
 
 
+def _tarea_local(args, cfg: dict) -> int:
+    """Tiendas solo_local, sin ventana. Sale sin hacer nada si va con poca batería
+    o si ya hay otra instancia; sin conexión, `_ciclo` también lo salta."""
+    tarea_local.log_a_archivo(RAIZ / "datos" / "tarea_local.log")
+    enchufado, pct = tarea_local.energia()
+    if not tarea_local.bateria_suficiente(enchufado, pct, cfg["tarea_local"]["bateria_min"]):
+        log.info("Batería al %s %% sin cargador: se salta este ciclo", pct)
+        return 0
+    cerrojo = tarea_local.Cerrojo(RAIZ / "datos" / "tarea_local.lock")
+    if not cerrojo.adquirir():
+        log.info("Ya hay otra instancia en marcha: se salta este ciclo")
+        return 0
+    try:
+        return asyncio.run(_ciclo(args, cfg, solo_local=True))
+    except Exception:
+        log.exception("La tarea local terminó con un error")
+        return 1
+    finally:
+        cerrojo.liberar()
+
+
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(prog="bot")
     sub = p.add_subparsers(dest="orden", required=True)
@@ -114,6 +156,10 @@ def main(argv: list[str] | None = None) -> int:
                    help="inyecta un precio falso en una BD de prueba y manda el email")
     sub.add_parser("test-email", help="manda un email de prueba")
     sub.add_parser("sonda", help="comprueba qué tiendas responden desde esta IP")
+    tl = sub.add_parser("tarea-local", help="tiendas solo_local (Programador de tareas)")
+    tl.add_argument("--db", default=str(RAIZ / "datos" / "historial.sqlite"))
+    tl.add_argument("--salida", default=str(RAIZ / "datos" / "ofertas_local.json"))
+    tl.set_defaults(solo=None, simular_alerta=False)
     args = p.parse_args(argv)
 
     _logging()
@@ -127,6 +173,8 @@ def main(argv: list[str] | None = None) -> int:
         for linea in asyncio.run(sonda.ejecutar()):
             print(linea)
         return 0
+    if args.orden == "tarea-local":
+        return _tarea_local(args, cfg)
     if args.simular_alerta:
         return asyncio.run(_simular(cfg))
     return asyncio.run(_ciclo(args, cfg))

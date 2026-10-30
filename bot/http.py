@@ -35,6 +35,7 @@ class Cliente:
         self._global = asyncio.Semaphore(cfg.get("concurrencia_global", 4))
         self._por_host: dict[str, asyncio.Semaphore] = {}
         self._ultimo: dict[str, float] = {}
+        self._bloqueados: dict[str, str] = {}  # host -> motivo; no se le vuelve a pedir nada
         self._http = httpx.AsyncClient(headers=CABECERAS, follow_redirects=True,
                                        timeout=cfg.get("timeout", 20), http2=False)
         self.peticiones = 0
@@ -45,6 +46,8 @@ class Cliente:
     async def get(self, url: str, *, params: dict | None = None,
                   cabeceras: dict | None = None, detectar_reto: bool = True) -> httpx.Response:
         host = urlsplit(url).netloc
+        if host in self._bloqueados:  # tras un 403/429 o reto, nada más a esa tienda en el ciclo
+            raise Bloqueado(f"{self._bloqueados[host]} (sin más peticiones en este ciclo)")
         sem = self._por_host.setdefault(
             host, asyncio.Semaphore(self.cfg.get("concurrencia_por_tienda", 1)))
         intentos = self.cfg.get("reintentos", 2) + 1
@@ -60,18 +63,25 @@ class Cliente:
                         raise
                     continue
                 if r.status_code in (403, 429):
-                    raise Bloqueado(f"HTTP {r.status_code} en {url}")
+                    raise self._bloquear(host, f"HTTP {r.status_code} en {url}")
                 if r.status_code >= 500 and intento < intentos:
                     log.warning("%s intento %d: HTTP %d", url, intento, r.status_code)
                     continue
                 r.raise_for_status()
                 if detectar_reto and _parece_reto(r.text):
-                    raise Bloqueado(f"Página de reto/CAPTCHA en {url}")
+                    raise self._bloquear(host, f"Página de reto/CAPTCHA en {url}")
                 return r
         raise RuntimeError("inalcanzable")
 
+    def _bloquear(self, host: str, motivo: str) -> Bloqueado:
+        self._bloqueados[host] = motivo
+        log.error("Bloqueo en %s: %s. No se reintenta en este ciclo.", host, motivo)
+        return Bloqueado(motivo)
+
     async def _pausa(self, host: str) -> None:
-        espera = random.uniform(self.cfg.get("pausa_min", 1.0), self.cfg.get("pausa_max", 3.0))
+        minimo, maximo = self.cfg.get("pausas_por_host", {}).get(
+            host, (self.cfg.get("pausa_min", 1.0), self.cfg.get("pausa_max", 3.0)))
+        espera = random.uniform(minimo, maximo)
         transcurrido = time.monotonic() - self._ultimo.get(host, 0)
         if transcurrido < espera:
             await asyncio.sleep(espera - transcurrido)

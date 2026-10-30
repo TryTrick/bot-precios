@@ -77,17 +77,33 @@ usuario = solo local (`solo_local: true` en config.yaml; se salta si `GITHUB_ACT
 - 117 peticiones, 136 s, ~1.465 productos válidos, 0 caídas. 89 tests.
 - En Actions: sin PcComponentes (solo_local) → ~90 peticiones; MediaMarkt marca el tiempo (~135 s).
 
-## Fase 3 — Actions + Pages 🟡 (código listo, falta configuración del usuario y primer run)
+## Fase 3 — Actions + Pages ✅ (primer run 30/10/2026 OK, rama `datos` y web publicadas)
 - `.github/workflows/ciclo.yml`: cron */15, workflow_dispatch y push (bot/, site/, config).
   `concurrency: ciclo`. Historial: `git show FETCH_HEAD:historial.sqlite` de la rama `datos` y
   force-push de un commit único al terminar. Pages con upload-pages-artifact + deploy-pages
   (job `publicar`). Keepalive: el primer run programado tras las 00:00 UTC llama a
   `PUT .../actions/workflows/ciclo.yml/enable`. Resumen por tienda en GITHUB_STEP_SUMMARY.
-- Pendiente del usuario: Secrets (SMTP_USER, SMTP_PASS, EMAIL_TO), Pages → Source «GitHub Actions».
+- Secrets y Pages configurados por el usuario. Web: https://trytrick.github.io/bot-precios/
 
-## Fase 4 — Web 🟡 (hecha, falta verla publicada)
+## Fase 4 — Web ✅
 - `site/index.html`, `estilo.css`, `app.js` (~9 KB, sin frameworks, modo oscuro, móvil).
   Términos con números = coincidencia exacta; solo letras = prefijo. Ordena por precio, una
   línea por variante (clave), interruptor de reacondicionados, consulta en el `#hash`.
 - Decisión: «5G»/«4G» ya no forman parte de la clave (S26 Ultra salía duplicado PcC/Samsung).
+
+### Tarea local de PcComponentes (opción B, elegida por el usuario) ✅
+- Tarea de Windows `bot-precios-local` (`scripts/instalar_tarea.ps1`): cada 30 min,
+  `conhost --headless uv run python -m bot tarea-local`, una instancia (IgnoreNew + cerrojo
+  en `datos/tarea_local.lock`), solo con red, límite 20 min. Log: `datos/tarea_local.log`.
+- `bot/tarea_local.py`: sin cargador y batería < 20 % → no empieza. Sin conexión → no empieza
+  (y no cuenta como tienda caída).
+- Pausas de 5–10 s para www.pccomponentes.com (`red.pausas_por_host`). Tras un 403/429/reto el
+  cliente no vuelve a pedir nada a ese host en el ciclo; PcComponentes cuenta como caída.
+- Sin duplicados entre Actions y local (`bot/compartidos.py`): cada aviso guarda su huella
+  (tienda vendedora, clave, categoría, precio). Actions las publica en `datos/avisos.json`; la
+  tarea local en la rama `avisos-local` (solo si avisa). Cada lado lee las del otro antes de
+  avisar. Mismo chollo = misma tienda + (misma clave sin bajar >2 %, o misma categoría y precio ±2 %),
+  72 h. Límite: si ambos lo detectan en el mismo cuarto de hora pueden llegar dos.
+- La opción C (subir los datos de PcComponentes a la web) queda para más adelante.
+
 ## Fase 5 — Verificación ⏳

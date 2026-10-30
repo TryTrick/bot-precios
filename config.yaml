@@ -18,8 +18,20 @@ red:
   concurrencia_por_tienda: 1
   pausa_min: 1.0          # segundos entre peticiones a la misma tienda
   pausa_max: 3.0
+  pausas_por_host:        # pausas más largas para tiendas delicadas [mín, máx] en segundos
+    www.pccomponentes.com: [5.0, 10.0]
   timeout: 20
   reintentos: 2
+
+# Avisos compartidos entre Actions y la tarea local, para no recibir el mismo chollo
+# dos veces (p. ej. PcComponentes en local y su hilo de Chollometro en Actions).
+avisos_compartidos:
+  url_actions: https://raw.githubusercontent.com/TryTrick/bot-precios/datos/avisos.json
+  url_local: https://raw.githubusercontent.com/TryTrick/bot-precios/avisos-local/avisos.json
+
+# Tarea programada de Windows (tiendas solo_local), ver README
+tarea_local:
+  bateria_min: 20         # % mínimo para empezar si el portátil va sin cargador
 
 tienda_rota:
   ciclos_fallidos: 3      # fallos (o 0 productos) seguidos antes de avisar

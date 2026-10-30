@@ -45,7 +45,10 @@ CREATE TABLE IF NOT EXISTS avisos (
     id_tienda TEXT NOT NULL,
     precio REAL NOT NULL,
     referencia REAL NOT NULL,
-    enviado TEXT NOT NULL
+    enviado TEXT NOT NULL,
+    tienda_real TEXT,   -- quién vende (en Chollometro, la tienda del chollo)
+    clave TEXT,
+    categoria TEXT
 );
 CREATE INDEX IF NOT EXISTS ix_avisos ON avisos(tienda, id_tienda);
 
@@ -70,6 +73,10 @@ class Historial:
         self.con = sqlite3.connect(str(ruta))
         self.con.row_factory = sqlite3.Row
         self.con.executescript(ESQUEMA)
+        columnas = {r[1] for r in self.con.execute("PRAGMA table_info(avisos)")}
+        for col in ("tienda_real", "clave", "categoria"):  # BD creada antes de estas columnas
+            if col not in columnas:
+                self.con.execute(f"ALTER TABLE avisos ADD COLUMN {col} TEXT")
 
     def cerrar(self) -> None:
         self.con.commit()
@@ -131,11 +138,22 @@ class Historial:
             (tienda, id_tienda)).fetchone()
         return r[0]
 
-    def registrar_aviso(self, tienda: str, id_tienda: str, precio: float,
-                        referencia: float) -> None:
-        self.con.execute("INSERT INTO avisos VALUES (?,?,?,?,?)",
-                         (tienda, id_tienda, precio, referencia, _ahora()))
+    def registrar_aviso(self, tienda: str, id_tienda: str, precio: float, referencia: float,
+                        tienda_real: str | None = None, clave: str | None = None,
+                        categoria: str | None = None) -> None:
+        self.con.execute(
+            "INSERT INTO avisos (tienda, id_tienda, precio, referencia, enviado, tienda_real, "
+            "clave, categoria) VALUES (?,?,?,?,?,?,?,?)",
+            (tienda, id_tienda, precio, referencia, _ahora(), tienda_real or tienda, clave,
+             categoria))
         self.con.commit()
+
+    def avisos_desde(self, desde: str) -> list[dict]:
+        """Huellas de los avisos enviados desde `desde` (ISO), para compartir y deduplicar."""
+        filas = self.con.execute(
+            "SELECT COALESCE(tienda_real, tienda) AS tienda, clave, categoria, precio, enviado "
+            "FROM avisos WHERE enviado >= ? ORDER BY enviado", (desde,))
+        return [dict(f) for f in filas]
 
     # --- estado de tiendas --------------------------------------------------
 

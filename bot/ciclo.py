@@ -42,7 +42,8 @@ async def _listar(t: Tienda, categorias: list[str]) -> tuple[list[Oferta] | Exce
 
 
 async def ejecutar(cfg: dict, db: Historial, tiendas: list[Tienda],
-                   prueba: bool = False) -> Resumen:
+                   prueba: bool = False, externos: list[dict] = ()) -> Resumen:
+    """`externos`: avisos ya enviados por la otra ejecución (ver bot/compartidos.py)."""
     resumen = Resumen()
     listados = await asyncio.gather(*(_listar(t, cfg["categorias"]) for t in tiendas))
 
@@ -63,7 +64,7 @@ async def ejecutar(cfg: dict, db: Historial, tiendas: list[Tienda],
                 r.descartados += 1
                 continue
             r.productos += 1
-            await _procesar(cfg, db, t, o, resumen, prueba)
+            await _procesar(cfg, db, t, o, resumen, prueba, externos)
         db.con.commit()
         log.info("[%s] OK en %.1fs: %d productos válidos, %d descartados",
                  t.nombre, segundos, r.productos, r.descartados)
@@ -73,7 +74,7 @@ async def ejecutar(cfg: dict, db: Historial, tiendas: list[Tienda],
 
 
 async def _procesar(cfg: dict, db: Historial, t: Tienda, o: Oferta,
-                    resumen: Resumen, prueba: bool) -> None:
+                    resumen: Resumen, prueba: bool, externos: list[dict]) -> None:
     if o.estado == "nuevo":
         o.estado = normalizar.detectar_estado(o.titulo)
     clave = normalizar.clave_producto(o.titulo, o.categoria, o.marca)
@@ -83,14 +84,15 @@ async def _procesar(cfg: dict, db: Historial, t: Tienda, o: Oferta,
         resumen.candidatos += 1
         c = Candidato(o, clave, ref, explicacion, reglas.descuento_pct(o.precio, ref))
         log.warning("[%s] CANDIDATO: %s a %.2f € (ref %.2f €)", t.nombre, o.titulo, o.precio, ref)
-        await _avisar(db, t, c, resumen, prueba)
+        await _avisar(db, t, c, resumen, prueba, externos)
     if not t.solo_avisos:
         db.guardar(o, clave)
 
 
-async def _avisar(db: Historial, t: Tienda, c: Candidato, resumen: Resumen, prueba: bool) -> None:
-    if avisos.es_duplicado(db, c.oferta):
-        log.info("[%s] ya avisado a ese precio o menor: %s", t.nombre, c.oferta.titulo)
+async def _avisar(db: Historial, t: Tienda, c: Candidato, resumen: Resumen, prueba: bool,
+                 externos: list[dict]) -> None:
+    if avisos.es_duplicado(db, c, externos):
+        log.info("[%s] ya avisado (aquí o en la otra ejecución): %s", t.nombre, c.oferta.titulo)
         return
     ok, motivo, nueva = await confirmar(t, c)
     if not ok:

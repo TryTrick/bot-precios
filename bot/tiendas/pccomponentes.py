@@ -17,6 +17,7 @@ import logging
 import re
 import time
 
+from ..http import Bloqueado
 from ..modelos import NUEVO, REACONDICIONADO, Oferta
 from . import registrar
 from .base import Tienda
@@ -134,6 +135,9 @@ class PcComponentes(Tienda):
                                           return_exceptions=True)
         vistas: dict[str, Oferta] = {}
         errores = []
+        for res in resultados:
+            if isinstance(res, Bloqueado):
+                raise res  # no se aprovecha lo leído: la tienda cuenta como caída este ciclo
         for cat, res in zip(cats, resultados):
             if isinstance(res, Exception):
                 errores.append(f"{cat}: {type(res).__name__}: {res}")

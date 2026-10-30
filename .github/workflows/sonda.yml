@@ -4,6 +4,7 @@ name: sonda
 on:
   workflow_dispatch:
   push:
+    branches: [main]
     paths: [bot/sonda.py, .github/workflows/sonda.yml]
 permissions:
   contents: read
