@@ -1,6 +1,8 @@
 """Tarea local: bloqueos sin reintento, avisos compartidos sin duplicados, batería y cerrojo."""
 import json
 import sqlite3
+import subprocess
+import sys
 from datetime import datetime, timedelta, timezone
 
 import httpx
@@ -173,3 +175,13 @@ def test_una_sola_instancia(tmp_path):
     a.liberar()
     assert b.adquirir()
     b.liberar()
+
+
+@pytest.mark.skipif(sys.platform != "win32", reason="solo Windows")
+def test_prioridad_baja_baja_el_disco():
+    codigo = ("import ctypes; from bot.tarea_local import prioridad_baja; assert prioridad_baja(); "
+              "v = ctypes.c_ulong(); ctypes.windll.ntdll.NtQueryInformationProcess("
+              "ctypes.c_void_p(-1), 33, ctypes.byref(v), 4, None); print(v.value)")
+    r = subprocess.run([sys.executable, "-c", codigo], capture_output=True, text=True)
+    assert r.returncode == 0, r.stderr
+    assert int(r.stdout) == 0  # prioridad de E/S «muy baja» (2 = normal)

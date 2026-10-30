@@ -17,7 +17,10 @@ $ajustes = New-ScheduledTaskSettingsSet `
     -RunOnlyIfNetworkAvailable `
     -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries `
     -StartWhenAvailable `
+    -Priority 9 `
     -ExecutionTimeLimit (New-TimeSpan -Minutes 20)
+# Priority 9 = CPU en reposo (idle) para conhost y uv; el bot además pasa a modo segundo
+# plano de Windows (CPU, disco y memoria de baja prioridad), ver bot/tarea_local.py.
 # Batería < 20 % y falta de internet real los comprueba también el propio bot
 $usuario = New-ScheduledTaskPrincipal -UserId "$env:USERDOMAIN\$env:USERNAME" -LogonType Interactive
 

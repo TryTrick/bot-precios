@@ -128,6 +128,8 @@ def _tarea_local(args, cfg: dict) -> int:
     """Tiendas solo_local, sin ventana. Sale sin hacer nada si va con poca batería
     o si ya hay otra instancia; sin conexión, `_ciclo` también lo salta."""
     tarea_local.log_a_archivo(RAIZ / "datos" / "tarea_local.log")
+    if not tarea_local.prioridad_baja():
+        log.warning("No se pudo bajar la prioridad del proceso")
     enchufado, pct = tarea_local.energia()
     if not tarea_local.bateria_suficiente(enchufado, pct, cfg["tarea_local"]["bateria_min"]):
         log.info("Batería al %s %% sin cargador: se salta este ciclo", pct)
