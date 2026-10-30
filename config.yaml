@@ -34,6 +34,10 @@ avisos_compartidos:
 # Tarea programada de Windows (tiendas solo_local), ver README
 tarea_local:
   bateria_min: 20         # % mínimo para empezar si el portátil va sin cargador
+  # Tras un bloqueo (403/429/reto) no se vuelve a pedir nada a esa tienda durante
+  # 2 h, luego 4 h, 8 h… hasta 24 h; un ciclo que funciona devuelve el ritmo normal.
+  espera_bloqueo_horas: 2
+  espera_bloqueo_max_horas: 24
 
 tienda_rota:
   ciclos_fallidos: 3      # fallos (o 0 productos) seguidos antes de avisar

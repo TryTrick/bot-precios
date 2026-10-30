@@ -16,7 +16,7 @@ PcComponentes se vigila además desde tu PC con una tarea programada de Windows
 ## Cómo funciona
 
 ```
-cron */15 (GitHub Actions)
+cron 7,22,37,52 * * * * (GitHub Actions, cada 15 min fuera del :00)
  ├─ lee las tiendas en paralelo (pocas peticiones, pausas, sin saltarse bloqueos)
  ├─ por cada producto: precio de referencia → ¿cumple la regla? → vuelve a consultar
  │  la ficha para confirmarlo → email (sin repetir avisos)
@@ -131,12 +131,15 @@ powershell -ExecutionPolicy Bypass -File scripts\instalar_tarea.ps1
 
 Crea la tarea `bot-precios-local` del Programador de tareas, con este comportamiento:
 
-- Se ejecuta cada 30 minutos mientras tienes la sesión iniciada, sin ventana
+- Se ejecuta cada 60 minutos mientras tienes la sesión iniciada, sin ventana
   (`conhost --headless`) y con prioridad baja de CPU y disco.
 - No empieza si no hay conexión, ni si el portátil va sin cargador por debajo del 20 % de
   batería. Nunca hay dos a la vez.
 - Hace unas 28 peticiones con pausas de 5 a 10 segundos (unos 3–4 minutos por ciclo).
-- Con un 403, un 429 o una página de reto deja de pedir en ese ciclo y espera al siguiente.
+- Con un 403, un 429 o una página de reto deja de pedir en el acto y no vuelve a intentarlo
+  hasta pasadas 2 h. Si vuelve a pasar, espera 4 h, luego 8 h, y así hasta 24 h. Solo un
+  ciclo que funciona devuelve el ritmo normal. La espera está en `datos\espera_tiendas.json`:
+  borrarlo la anula.
 - El log está en `datos\tarea_local.log` (como mucho unos 4 MB, rotando).
 - Para pausarla: Programador de tareas → `bot-precios-local` → Deshabilitar. Para quitarla:
   `Unregister-ScheduledTask -TaskName bot-precios-local -Confirm:$false`.
@@ -158,10 +161,10 @@ datos». Si lleva más de 48 horas, sus ofertas dejan de mostrarse.
   esas protecciones. De ellas solo llegan los avisos que alguien publique en Chollometro.
 - **Hay muy pocos reacondicionados**, porque Back Market es una de las bloqueadas.
 - **PcComponentes depende de tu PC**: solo se actualiza con el PC encendido y la sesión
-  iniciada. Sus precios en la web pueden tener hasta 30 minutos más de retraso que los demás.
-  Los avisos de PcComponentes los manda tu PC, no Actions. Desde tu IP doméstica también ha
-  respondido 403 alguna vez: el bot se detiene en la primera respuesta y lo vuelve a intentar
-  al cabo de 30 minutos.
+  iniciada. Sus precios en la web pueden tener hasta una hora más de retraso que los demás,
+  y más durante una espera tras un bloqueo. Los avisos de PcComponentes los manda tu PC, no
+  Actions. Desde tu IP doméstica también ha respondido 403 (el 30/10/2026, con ciclos cada
+  30 min): por eso ahora va cada hora y con espera creciente tras un bloqueo.
 - **Chollometro**: no se puede comprobar si el chollo lo vende la tienda o un vendedor externo.
   El enlace lleva al hilo, no al producto. Su RSS solo cubre la última hora, más o menos.
 - **MediaMarkt** no vende ninguna tarjeta gráfica directamente (todas son de vendedores
@@ -182,10 +185,13 @@ datos». Si lleva más de 48 horas, sus ofertas dejan de mostrarse.
   emparejan, y un mismo producto puede salir en dos líneas si cada tienda lo nombra de forma
   distinta. «5G» se ignora al emparejar, así que Redmi 15C y 15C 5G cuentan como el mismo
   producto (su diferencia de precio nunca dispara un aviso).
-- **El cron de GitHub no es puntual.** El `*/15` puede retrasarse de 5 a 20 minutos en horas
-  punta o saltarse alguna ejecución, y la primera ejecución programada de un workflow nuevo
-  tarda en llegar. GitHub desactiva los crons tras 60 días sin actividad en el repositorio; el
-  workflow lo evita reactivándose una vez al día.
+- **El cron de GitHub no es puntual.** Puede retrasarse de 5 a 20 minutos en horas punta o
+  saltarse alguna ejecución (por eso evita el minuto :00), y la primera ejecución programada
+  de un workflow nuevo tarda en llegar.
+- **60 días sin actividad.** GitHub desactiva los crons de un repositorio público tras 60 días
+  sin actividad, y no aclara qué cuenta como actividad: los commits del bot en la rama
+  `datos` probablemente no. El workflow se reactiva una vez al día por la API y, como
+  respaldo, hace un commit vacío en `main` si pasan 50 días sin commits.
 - **Aún puede llegar un aviso duplicado** si Actions y la tarea local detectan el mismo chollo
   casi a la vez (en el mismo cuarto de hora). Los avisos compartidos se leen con una caché de
   unos 5 minutos.

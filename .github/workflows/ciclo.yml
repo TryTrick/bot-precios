@@ -3,7 +3,8 @@
 name: ciclo
 on:
   schedule:
-    - cron: "*/15 * * * *"   # GitHub puede retrasarlo varios minutos en horas punta
+    # Cada 15 min pero fuera del minuto :00, la hora de más carga de GitHub (retrasa o descarta)
+    - cron: "7,22,37,52 * * * *"
   workflow_dispatch:
   push:
     branches: [main]
@@ -76,6 +77,20 @@ jobs:
               -H "Accept: application/vnd.github+json" \
               "https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/workflows/ciclo.yml/enable"
             echo "Workflow re-habilitado (keepalive)"
+          fi
+
+      - name: Commit vacío en main si lleva 50 días sin commits
+        # Respaldo de lo anterior: un commit en la rama principal sí cuenta seguro como
+        # actividad. Un push con GITHUB_TOKEN no vuelve a lanzar este workflow.
+        if: github.event_name == 'schedule'
+        run: |
+          dias=$(( ($(date +%s) - $(git log -1 --format=%ct)) / 86400 ))
+          echo "Último commit en main hace $dias días"
+          if [ "$dias" -ge 50 ]; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git commit --allow-empty -q -m "Mantener activos los workflows programados ($dias días sin commits)"
+            git push -q origin HEAD:main || echo "::warning::No se pudo subir el commit vacío"
           fi
 
   publicar:

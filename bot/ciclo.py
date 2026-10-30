@@ -9,6 +9,7 @@ from dataclasses import dataclass, field
 from . import avisos, normalizar, referencia, reglas
 from .confirmar import comprobar_oferta, confirmar
 from .db import Historial
+from .http import Bloqueado
 from .modelos import Candidato, Oferta
 from .tiendas.base import Tienda
 
@@ -23,6 +24,7 @@ class ResultadoTienda:
     descartados: int = 0
     segundos: float = 0.0
     error: str = ""
+    bloqueado: bool = False   # 403/429/reto: la tarea local espera más antes de volver
 
 
 @dataclass
@@ -53,6 +55,7 @@ async def ejecutar(cfg: dict, db: Historial, tiendas: list[Tienda],
         # En una fuente solo de avisos es normal no tener nada relevante en un ciclo
         if isinstance(resultado, Exception) or (not resultado and not t.solo_avisos):
             r.ok = False
+            r.bloqueado = isinstance(resultado, Bloqueado)
             r.error = (f"{type(resultado).__name__}: {resultado}"
                        if isinstance(resultado, Exception) else "0 productos")
             log.error("[%s] CAÍDA en %.1fs: %s", t.nombre, segundos, r.error)

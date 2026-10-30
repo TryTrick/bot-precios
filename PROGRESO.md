@@ -120,4 +120,8 @@ usuario = solo local (`solo_local: true` en config.yaml; se salta si `GITHUB_ACT
 - Arreglado el emparejado: la coma decimal (6,9") cortaba el título; «S Pen integrado» y
   «cámara» ya no entran en la clave. S25/S26 Ultra de PcC, Samsung y MediaMarkt coinciden.
 - README en español con secrets, regla, tienda nueva, tarea local y limitaciones.
-- Pendiente de observar: primera ejecución programada por cron (hasta ahora solo push).
+- Cron a `7,22,37,52 * * * *` (fuera del :00). Respaldo de los 60 días: commit vacío en main si
+  lleva 50 días sin commits (los commits en `datos` probablemente no cuentan).
+- PcComponentes: tarea cada 60 min; espera creciente tras un bloqueo (2 h, 4 h… 24 h, en
+  `datos/espera_tiendas.json`; solo un ciclo OK la quita). Espera inicial de 6 h el 31/10.
+- Regla del usuario: no lanzar a mano nada que pida a PcComponentes sin preguntar.

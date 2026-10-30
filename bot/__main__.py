@@ -15,7 +15,7 @@ import logging
 import os
 import sys
 import time
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
 from . import avisos, compartidos, correo, exportar, normalizar, sonda, tarea_local
@@ -49,6 +49,18 @@ async def _ciclo(args, cfg: dict, solo_local: bool = False) -> int:
         activas = [n for n in activas if cfg["tiendas"][n].get("solo_local")]
     if args.solo:
         activas = [n for n in args.solo.split(",") if n in registro]
+    esperas = None
+    if not en_actions:  # tras un bloqueo, nada de peticiones a esa tienda hasta que pase
+        tl = cfg["tarea_local"]
+        esperas = tarea_local.Esperas(Path(args.db).parent / "espera_tiendas.json",
+                                      tl["espera_bloqueo_horas"], tl["espera_bloqueo_max_horas"])
+        ahora = datetime.now(timezone.utc)
+        for n in list(activas):
+            if hasta := esperas.hasta(n, ahora):
+                log.warning("[%s] en espera tras un bloqueo hasta %s: no se le pide nada", n, hasta)
+                activas.remove(n)
+        if solo_local and not activas:
+            return 0
     http = Cliente(cfg["red"])
     comp = cfg["avisos_compartidos"]
     try:  # avisos que ya mandó la otra ejecución (Actions <-> local)
@@ -90,6 +102,14 @@ async def _ciclo(args, cfg: dict, solo_local: bool = False) -> int:
     finally:
         db.cerrar()
         await http.cerrar()
+    if esperas is not None:
+        for r in resumen.tiendas:
+            if r.bloqueado:
+                horas = esperas.bloqueo(r.tienda, datetime.now(timezone.utc))
+                log.error("[%s] bloqueada: no se le pedirá nada en %g h", r.tienda, horas)
+            elif r.ok:
+                esperas.funciona(r.tienda)
+        esperas.guardar()
     if not en_actions and (locales or resumen.avisos_enviados):
         try:  # para la web y para que Actions no repita estos avisos por Chollometro
             compartidos.subir_rama_local(archivos)

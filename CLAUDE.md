@@ -21,7 +21,10 @@ Plan aprobado: `C:\Users\llove\.claude\plans\pasted-content-id-1aad-vas-a-twinkl
   `@registrar`, importada en `tiendas/__init__.py:cargar_todas`, activada en `config.yaml`, con
   fixture real guardado y su test. Solo productos vendidos por la tienda (`vendido_por_tienda`).
 - No inventar URLs/selectores: verificar con curl y guardar el HTML/JSON real como fixture.
-- No saltarse CAPTCHAs ni retos anti-bot: 403/429/reto → `http.Bloqueado` → tienda caída.
+- No saltarse CAPTCHAs ni retos anti-bot: 403/429/reto → `http.Bloqueado` → tienda caída
+  (en local, además, espera creciente en `datos/espera_tiendas.json`).
+- **No lanzar a mano nada que haga peticiones a PcComponentes sin preguntar al usuario.** Para
+  probar: tests, fixtures o datos guardados.
 - Una fila de precio por producto y día (`precios_diarios`); la referencia excluye el día de hoy
   del historial propio.
 - Emparejado conservador (`normalizar.clave_producto`): ante la duda devuelve None.

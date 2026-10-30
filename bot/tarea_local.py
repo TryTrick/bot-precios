@@ -6,8 +6,10 @@ hacer ninguna petición se comprueba la batería y que no haya otra instancia.
 from __future__ import annotations
 
 import ctypes
+import json
 import logging
 import sys
+from datetime import datetime, timedelta
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
 
@@ -47,6 +49,44 @@ def prioridad_baja() -> bool:
 def bateria_suficiente(enchufado: bool | None, pct: int | None, minimo: int) -> bool:
     """Solo se salta el ciclo si va con batería y está por debajo del mínimo."""
     return not (enchufado is False and pct is not None and pct < minimo)
+
+
+class Esperas:
+    """Espera creciente tras un bloqueo (403/429/reto): 2 h, 4 h, 8 h… hasta 24 h.
+    Solo un ciclo que funciona devuelve la tienda a su ritmo normal. Se guarda en un
+    JSON local: {tienda: {"bloqueos": n, "hasta": ISO}}."""
+
+    def __init__(self, ruta: Path, horas_base: float = 2, horas_max: float = 24):
+        self.ruta, self.horas_base, self.horas_max = ruta, horas_base, horas_max
+        try:
+            self.datos: dict[str, dict] = json.loads(ruta.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            self.datos = {}
+
+    def hasta(self, tienda: str, ahora: datetime) -> str | None:
+        """Hora hasta la que no se debe pedir nada a la tienda, o None si puede."""
+        h = self.datos.get(tienda, {}).get("hasta")
+        return h if h and h > ahora.isoformat() else None
+
+    def bloqueo(self, tienda: str, ahora: datetime) -> float:
+        n = self.datos.get(tienda, {}).get("bloqueos", 0) + 1
+        horas = min(self.horas_base * 2 ** (n - 1), self.horas_max)
+        self.datos[tienda] = {"bloqueos": n,
+                              "hasta": (ahora + timedelta(hours=horas)).isoformat()}
+        return horas
+
+    def esperar(self, tienda: str, horas: float, ahora: datetime) -> None:
+        """Espera fija puesta a mano (conserva el número de bloqueos)."""
+        n = max(self.datos.get(tienda, {}).get("bloqueos", 0), 1)
+        self.datos[tienda] = {"bloqueos": n,
+                              "hasta": (ahora + timedelta(hours=horas)).isoformat()}
+
+    def funciona(self, tienda: str) -> None:
+        self.datos.pop(tienda, None)
+
+    def guardar(self) -> None:
+        self.ruta.parent.mkdir(parents=True, exist_ok=True)
+        self.ruta.write_text(json.dumps(self.datos, indent=1), encoding="utf-8")
 
 
 class Cerrojo:

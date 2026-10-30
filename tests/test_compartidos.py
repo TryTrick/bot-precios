@@ -245,3 +245,58 @@ def test_prioridad_baja_baja_el_disco():
     r = subprocess.run([sys.executable, "-c", codigo], capture_output=True, text=True)
     assert r.returncode == 0, r.stderr
     assert int(r.stdout) == 0  # prioridad de E/S «muy baja» (2 = normal)
+
+
+# --- espera creciente tras un bloqueo -------------------------------------------------
+
+def test_espera_crece_y_se_limpia_al_funcionar(tmp_path):
+    from bot.tarea_local import Esperas
+    ahora = datetime(2026, 10, 31, tzinfo=timezone.utc)
+    e = Esperas(tmp_path / "espera.json", 2, 24)
+    assert [e.bloqueo("pccomponentes", ahora) for _ in range(6)] == [2, 4, 8, 16, 24, 24]
+    e.guardar()
+    e = Esperas(tmp_path / "espera.json", 2, 24)  # sobrevive entre ejecuciones
+    assert e.hasta("pccomponentes", ahora + timedelta(hours=23))
+    assert e.hasta("pccomponentes", ahora + timedelta(hours=25)) is None
+    e.funciona("pccomponentes")
+    assert e.bloqueo("pccomponentes", ahora) == 2  # vuelve a empezar
+
+
+def test_espera_a_mano_y_archivo_roto(tmp_path):
+    from bot.tarea_local import Esperas
+    ruta = tmp_path / "espera.json"
+    ruta.write_text("{roto", encoding="utf-8")
+    e = Esperas(ruta)
+    ahora = datetime(2026, 10, 31, tzinfo=timezone.utc)
+    e.esperar("pccomponentes", 6, ahora)
+    assert e.hasta("pccomponentes", ahora + timedelta(hours=5, minutes=59))
+    assert e.bloqueo("pccomponentes", ahora) == 4  # cuenta como segundo bloqueo
+
+
+async def test_ciclo_marca_bloqueo(db, cfg, monkeypatch):
+    class Bloqueada(Simulada):
+        nombre = "bloqueada"
+
+        async def listar(self, categorias):
+            raise Bloqueado("HTTP 403")
+
+    monkeypatch.setattr(correo, "enviar", lambda a, c: None)
+    r = await ejecutar(cfg, db, [Bloqueada()])
+    assert r.tiendas[0].bloqueado and not r.tiendas[0].ok
+
+
+@respx.mock
+async def test_en_espera_no_hace_ni_una_peticion_a_la_tienda(tmp_path, cfg, monkeypatch):
+    import argparse
+    from bot import __main__ as cli
+    from bot.tarea_local import Esperas
+
+    monkeypatch.delenv("GITHUB_ACTIONS", raising=False)
+    pcc = respx.get(url__startswith="https://www.pccomponentes.com/")
+    e = Esperas(tmp_path / "espera_tiendas.json")
+    e.esperar("pccomponentes", 6, datetime.now(timezone.utc))
+    e.guardar()
+    args = argparse.Namespace(db=str(tmp_path / "h.sqlite"), salida=str(tmp_path / "o.json"),
+                              solo=None)
+    assert await cli._ciclo(args, cfg, solo_local=True) == 0
+    assert pcc.call_count == 0 and not respx.calls  # ni PcComponentes ni nada más
