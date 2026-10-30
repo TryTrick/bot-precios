@@ -32,7 +32,8 @@ _ACCESORIO_CUALQUIERA = re.compile(
     r"\b(protector de pantalla|cristal templado|compatible con|funda para|"
     r"carcasa para|correa para|cargador para|cable para|repuesto para|"
     r"soporte para|para iphone|para samsung|para galaxy|para ipad|para macbook|"
-    r"para apple watch|para airpods|para ps5|para nintendo switch|para xbox)\b"
+    r"para apple watch|para airpods|para ps5|para nintendo switch|para xbox|"
+    r"videojuego|juego para|edicion fisica|edicion digital|tarjeta regalo|dlc)\b"
 )
 _PACK = re.compile(r"\b(pack|kit|bundle|lote|combo)\b|\s\+\s")
 

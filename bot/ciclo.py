@@ -49,7 +49,8 @@ async def ejecutar(cfg: dict, db: Historial, tiendas: list[Tienda],
     for t, (resultado, segundos) in zip(tiendas, listados):
         r = ResultadoTienda(t.nombre, ok=True, segundos=round(segundos, 1))
         resumen.tiendas.append(r)
-        if isinstance(resultado, Exception) or not resultado:
+        # En una fuente solo de avisos es normal no tener nada relevante en un ciclo
+        if isinstance(resultado, Exception) or (not resultado and not t.solo_avisos):
             r.ok = False
             r.error = (f"{type(resultado).__name__}: {resultado}"
                        if isinstance(resultado, Exception) else "0 productos")
@@ -97,7 +98,7 @@ async def _avisar(db: Historial, t: Tienda, c: Candidato, resumen: Resumen, prue
         return
     c.oferta = nueva
     c.descuento_pct = reglas.descuento_pct(nueva.precio, c.referencia)
-    if avisos.enviar_alerta(db, c, t.nombre_visible, prueba):
+    if avisos.enviar_alerta(db, c, t.nombre_para(c.oferta), prueba, t.nota_aviso):
         resumen.avisos_enviados += 1
 
 

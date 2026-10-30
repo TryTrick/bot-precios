@@ -16,7 +16,8 @@ def es_duplicado(db: Historial, o: Oferta) -> bool:
     return anterior is not None and o.precio >= anterior
 
 
-def redactar_alerta(c: Candidato, nombre_tienda: str, prueba: bool = False) -> tuple[str, str]:
+def redactar_alerta(c: Candidato, nombre_tienda: str, prueba: bool = False,
+                    nota: str = "") -> tuple[str, str]:
     o = c.oferta
     prefijo = "[PRUEBA] " if prueba else ""
     asunto = (f"{prefijo}⚠️ {o.titulo[:80]} a {o.precio:.2f} € en {nombre_tienda} "
@@ -35,12 +36,13 @@ def redactar_alerta(c: Candidato, nombre_tienda: str, prueba: bool = False) -> t
         "",
         "Confirmado volviendo a consultar la ficha: vendido por la tienda, en stock,",
         "no es accesorio ni pack. Aun así, revísalo antes de comprar.",
-    ])
+    ] + (["", nota] if nota else []))
     return asunto, cuerpo
 
 
-def enviar_alerta(db: Historial, c: Candidato, nombre_tienda: str, prueba: bool = False) -> bool:
-    asunto, cuerpo = redactar_alerta(c, nombre_tienda, prueba)
+def enviar_alerta(db: Historial, c: Candidato, nombre_tienda: str, prueba: bool = False,
+                  nota: str = "") -> bool:
+    asunto, cuerpo = redactar_alerta(c, nombre_tienda, prueba, nota)
     try:
         correo.enviar(asunto, cuerpo)
     except Exception as e:

@@ -27,6 +27,7 @@ class Oferta:
     precio_tachado: float | None = None
     ean: str | None = None
     marca: str | None = None
+    vendedor: str | None = None   # tienda real cuando la fuente es un agregador
     visto: str = field(default_factory=ahora_iso)
 
 

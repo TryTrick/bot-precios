@@ -36,6 +36,16 @@ con `marketplaceSeller`/`onlineStatus`).
 Orden revisado: MediaMarkt → Chollometro → Samsung → Xiaomi → Apple; PcComponentes: decisión del
 usuario = solo local (`solo_local: true` en config.yaml; se salta si `GITHUB_ACTIONS=true`).
 
+### Chollometro ✅
+- `bot/tiendas/chollometro.py`: RSS `/rss/nuevos` + `/rss/hot` (30 elementos c/u, ~50 min, sin
+  paginación). Filtra tiendas fiables (`pepper:merchant`), categoría del feed y categoría deducida
+  del título. Ignora tiendas ya vigiladas directamente. Solo avisos (`solo_avisos`), no buscador.
+- Reconsulta: JSON del hilo (`threadId`, `price`, `nextBestPrice`, `isExpired`, `status`), solo
+  para precios ≤ `barrido_hasta`. `nextBestPrice` = precio tachado (último recurso).
+- Enlace del aviso = hilo de Chollometro (la URL de la tienda no se publica). No se puede verificar
+  el vendedor (nota en el email). Fuente solo-avisos vacía ≠ caída.
+- Siguiente: Samsung → Xiaomi → Apple → PcComponentes (solo local).
+
 ## Fase 3 — Actions + Pages ⏳
 ## Fase 4 — Web ⏳
 ## Fase 5 — Verificación ⏳
