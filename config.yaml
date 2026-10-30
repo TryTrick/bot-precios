@@ -43,5 +43,5 @@ tiendas:
   chollometro: {activa: true}
   samsung: {activa: true}
   amazon: {activa: false}   # 503 anti-robot; se cubre con Chollometro
-  apple: {activa: false}
-  xiaomi: {activa: false}
+  apple: {activa: true}     # iPhone e iPad
+  xiaomi: {activa: true}    # parcial: solo precio "desde" por familia

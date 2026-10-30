@@ -35,6 +35,7 @@ _ACCESORIO_CUALQUIERA = re.compile(
     r"para apple watch|para airpods|para ps5|para nintendo switch|para xbox|"
     r"videojuego|juego para|edicion fisica|edicion digital|tarjeta regalo|dlc)\b"
 )
+_CONECTIVIDAD = re.compile(r"\b(wi-?fi|gps)\s?\+\s?(cellular|cel\w*|lte|5g)\b")
 _PACK = re.compile(r"\b(pack|kit|bundle|lote|combo)\b|\s\+\s")
 
 _REACONDICIONADO = re.compile(
@@ -49,7 +50,9 @@ def es_accesorio(titulo: str) -> bool:
 
 
 def es_pack(titulo: str) -> bool:
-    return bool(_PACK.search(sin_acentos(titulo)))
+    # "Wi-Fi + Cellular" / "GPS + Cellular" es una variante de conectividad, no un pack
+    t = _CONECTIVIDAD.sub(" cellular", sin_acentos(titulo))
+    return bool(_PACK.search(t))
 
 
 def detectar_estado(titulo: str) -> str:

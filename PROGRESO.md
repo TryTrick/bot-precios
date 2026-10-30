@@ -23,7 +23,7 @@ con `marketplaceSeller`/`onlineStatus`).
 - Leer resultado de un run: `GET /repos/TryTrick/bot-precios/actions/runs?head_sha=<sha>` →
   jobs → `check-runs/<id>/annotations` (sin token).
 
-## Fase 2 — Tiendas 🟡
+## Fase 2 — Tiendas ✅ (30/10/2026)
 ### MediaMarkt ✅
 - `bot/tiendas/mediamarkt.py`: parsea `__PRELOADED_STATE__` (Apollo) en listado y ficha; EAN en el
   100 % de productos. Filtro `?marketplace=MediaMarkt`; `sort=currentprice asc` barrido hasta
@@ -60,7 +60,22 @@ usuario = solo local (`solo_local: true` en config.yaml; se salta si `GITHUB_ACT
 - Sin filtro de vendedor en URL; por precio ascendente solo salen externos → sin barrido:
   ventas + novedades + 1 pág. rotación price_desc. Consolas: `videoconsolas-ps5`, `-nintendo-switch-2`
   (xbox sin listado). Ciclo local: 27 peticiones, 54 s, ~400 productos propios.
-- Siguiente: Xiaomi → Apple.
+
+### Xiaomi ✅ (parcial)
+- `bot/tiendas/xiaomi.py`: precios por variante solo vía JS/API no visible en el HTML. Se usan
+  los bloques `goods` de `__PRELOADED_STATE__` en `/es/mobile/` y `/es/wearables/` (2 peticiones):
+  precio «desde» por familia, sin capacidad → título con «(precio desde)», clave None.
+
+### Apple ✅ (iPhone e iPad)
+- `bot/tiendas/apple.py`: índices `/es/shop/buy-iphone` y `/es/shop/buy-ipad` → páginas de modelo
+  con `productSelectionData` (`products` + `displayValues.prices[].amountBeforeTradeIn`).
+  Títulos desde claves internas (`256gb`→256GB, `wificell`→Wi-Fi + Cellular, `13inch`→13in); si la
+  opción de tamaño nombra el modelo («iPhone 18 Pro Max») se usa como modelo. Sin stock por ref.
+- Arreglado: «Wi-Fi + Cellular»/«GPS + Cellular» ya no cuenta como pack.
+
+### Ciclo local completo (6 tiendas)
+- 117 peticiones, 136 s, ~1.465 productos válidos, 0 caídas. 89 tests.
+- En Actions: sin PcComponentes (solo_local) → ~90 peticiones; MediaMarkt marca el tiempo (~135 s).
 
 ## Fase 3 — Actions + Pages ⏳
 ## Fase 4 — Web ⏳

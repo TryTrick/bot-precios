@@ -96,3 +96,9 @@ def test_reloj_tamano_y_lte():
     gps40 = clave_producto("Apple Watch SE 3, GPS, 40 mm", "relojes")
     assert lte44.endswith("|44mm-lte") and gps44.endswith("|44mm") and gps40.endswith("|40mm")
     assert len({lte44, gps44, gps40}) == 3
+
+
+def test_conectividad_no_es_pack():
+    assert not es_pack("Apple iPad Pro 256GB Wi-Fi + Cellular 11in")
+    assert not es_pack("Apple Watch SE 3 GPS + Cellular 44mm")
+    assert es_pack("Apple iPad Pro 256GB + Apple Pencil Pro")
