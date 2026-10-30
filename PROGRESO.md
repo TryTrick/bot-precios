@@ -106,4 +106,14 @@ usuario = solo local (`solo_local: true` en config.yaml; se salta si `GITHUB_ACT
   72 h. Límite: si ambos lo detectan en el mismo cuarto de hora pueden llegar dos.
 - La opción C (subir los datos de PcComponentes a la web) queda para más adelante.
 
-## Fase 5 — Verificación ⏳
+## Fase 5 — Verificación ✅ (30/10/2026)
+- Tarea local con prioridad baja (Priority 9 + modo segundo plano de Windows: E/S «muy baja»,
+  verificado). Log rotativo 3 × 1 MB.
+- «samsung s25 ultra»: Samsung y MediaMarkt ya no lo venden (comprobado en su API y en las
+  páginas por precio descendente de MediaMarkt); solo PcComponentes. Con los datos locales la
+  web muestra 1 variante a 1.724,51 € con enlace correcto a la ficha. En la web publicada,
+  «samsung s26 ultra» muestra 3 variantes (Samsung) con enlace y hora.
+- Arreglado el emparejado: la coma decimal (6,9") cortaba el título; «S Pen integrado» y
+  «cámara» ya no entran en la clave. S25/S26 Ultra de PcC, Samsung y MediaMarkt coinciden.
+- README en español con secrets, regla, tienda nueva, tarea local y limitaciones.
+- Pendiente de observar: primera ejecución programada por cron (hasta ahora solo push).
