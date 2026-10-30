@@ -1,6 +1,10 @@
-# Diagnóstico manual: comprueba qué tiendas responden desde las IPs de GitHub.
+# Diagnóstico: comprueba qué tiendas responden desde las IPs de GitHub.
+# Se lanza a mano (Actions → sonda → Run workflow) o al cambiar la propia sonda.
 name: sonda
-on: workflow_dispatch
+on:
+  workflow_dispatch:
+  push:
+    paths: [bot/sonda.py, .github/workflows/sonda.yml]
 permissions:
   contents: read
 jobs:
@@ -10,4 +14,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v6
-      - run: uv run python -m bot sonda
+      - name: Probar tiendas
+        run: |
+          uv run python -m bot sonda | tee sonda.txt
+          # Resultado también como anotación, visible en el resumen del run
+          echo "::notice title=sonda::$(sed ':a;N;$!ba;s/\n/%0A/g' sonda.txt)"
