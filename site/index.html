@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Buscador de precios</title>
+  <meta name="description" content="El precio más barato entre tiendas fiables españolas">
+  <link rel="stylesheet" href="estilo.css">
+</head>
+<body>
+  <header>
+    <h1>Buscador de precios</h1>
+    <p class="sub">La oferta más barata entre tiendas fiables, actualizada cada 15 minutos.</p>
+  </header>
+
+  <main>
+    <form id="form" role="search" autocomplete="off">
+      <label for="q" class="oculto">Producto</label>
+      <input id="q" type="search" placeholder="Ej.: samsung s25 ultra" autofocus>
+      <label class="interruptor">
+        <input id="reac" type="checkbox">
+        <span>Incluir reacondicionados</span>
+      </label>
+    </form>
+
+    <p id="estado" class="estado" aria-live="polite">Cargando ofertas…</p>
+    <ol id="resultados" class="resultados"></ol>
+  </main>
+
+  <footer>
+    <p id="pie"></p>
+    <p>Precios orientativos: compruébalos siempre en la tienda antes de comprar.</p>
+  </footer>
+
+  <template id="tpl">
+    <li class="oferta">
+      <div class="cabecera">
+        <a class="titulo" target="_blank" rel="noopener"></a>
+        <span class="precio"></span>
+      </div>
+      <div class="detalles">
+        <span class="tienda"></span>
+        <span class="etiqueta"></span>
+        <span class="hora"></span>
+      </div>
+    </li>
+  </template>
+
+  <script src="app.js" defer></script>
+</body>
+</html>

@@ -77,6 +77,17 @@ usuario = solo local (`solo_local: true` en config.yaml; se salta si `GITHUB_ACT
 - 117 peticiones, 136 s, ~1.465 productos válidos, 0 caídas. 89 tests.
 - En Actions: sin PcComponentes (solo_local) → ~90 peticiones; MediaMarkt marca el tiempo (~135 s).
 
-## Fase 3 — Actions + Pages ⏳
-## Fase 4 — Web ⏳
+## Fase 3 — Actions + Pages 🟡 (código listo, falta configuración del usuario y primer run)
+- `.github/workflows/ciclo.yml`: cron */15, workflow_dispatch y push (bot/, site/, config).
+  `concurrency: ciclo`. Historial: `git show FETCH_HEAD:historial.sqlite` de la rama `datos` y
+  force-push de un commit único al terminar. Pages con upload-pages-artifact + deploy-pages
+  (job `publicar`). Keepalive: el primer run programado tras las 00:00 UTC llama a
+  `PUT .../actions/workflows/ciclo.yml/enable`. Resumen por tienda en GITHUB_STEP_SUMMARY.
+- Pendiente del usuario: Secrets (SMTP_USER, SMTP_PASS, EMAIL_TO), Pages → Source «GitHub Actions».
+
+## Fase 4 — Web 🟡 (hecha, falta verla publicada)
+- `site/index.html`, `estilo.css`, `app.js` (~9 KB, sin frameworks, modo oscuro, móvil).
+  Términos con números = coincidencia exacta; solo letras = prefijo. Ordena por precio, una
+  línea por variante (clave), interruptor de reacondicionados, consulta en el `#hash`.
+- Decisión: «5G»/«4G» ya no forman parte de la clave (S26 Ultra salía duplicado PcC/Samsung).
 ## Fase 5 — Verificación ⏳

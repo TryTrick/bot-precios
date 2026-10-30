@@ -1,0 +1,67 @@
+:root {
+  --fondo: #f7f7f5;
+  --tarjeta: #ffffff;
+  --texto: #1d1d1f;
+  --suave: #6b6b70;
+  --borde: #e2e2e0;
+  --acento: #0b6bcb;
+  --precio: #0a7d32;
+  --reac: #8a5a00;
+  --reac-fondo: #fff4dc;
+  color-scheme: light dark;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --fondo: #121214;
+    --tarjeta: #1c1c1f;
+    --texto: #ececee;
+    --suave: #a0a0a8;
+    --borde: #2e2e33;
+    --acento: #5aa9ff;
+    --precio: #4cd07d;
+    --reac: #ffc766;
+    --reac-fondo: #3a2c10;
+  }
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  font: 16px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  background: var(--fondo);
+  color: var(--texto);
+}
+header, main, footer { max-width: 720px; margin: 0 auto; padding: 0 16px; }
+header { padding-top: 28px; }
+h1 { font-size: 1.5rem; margin: 0 0 4px; }
+.sub { margin: 0 0 20px; color: var(--suave); }
+form { display: grid; gap: 10px; }
+#q {
+  width: 100%;
+  font-size: 1.1rem;
+  padding: 12px 14px;
+  border: 1px solid var(--borde);
+  border-radius: 10px;
+  background: var(--tarjeta);
+  color: var(--texto);
+}
+#q:focus { outline: 2px solid var(--acento); outline-offset: 1px; }
+.interruptor { display: flex; align-items: center; gap: 8px; color: var(--suave); cursor: pointer; }
+.interruptor input { width: 18px; height: 18px; accent-color: var(--acento); }
+.estado { color: var(--suave); min-height: 1.4em; margin: 14px 0 8px; }
+.resultados { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.oferta {
+  background: var(--tarjeta);
+  border: 1px solid var(--borde);
+  border-radius: 12px;
+  padding: 12px 14px;
+}
+.cabecera { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+.titulo { color: var(--acento); text-decoration: none; font-weight: 600; overflow-wrap: anywhere; }
+.titulo:hover { text-decoration: underline; }
+.precio { font-size: 1.25rem; font-weight: 700; color: var(--precio); white-space: nowrap; }
+.detalles { display: flex; flex-wrap: wrap; gap: 6px 14px; margin-top: 6px; font-size: .9rem; color: var(--suave); }
+.tienda { font-weight: 600; color: var(--texto); }
+.etiqueta { border-radius: 6px; padding: 0 6px; }
+.etiqueta.reac { background: var(--reac-fondo); color: var(--reac); }
+footer { color: var(--suave); font-size: .85rem; padding-top: 24px; padding-bottom: 32px; }
+.oculto { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }

@@ -85,9 +85,12 @@ def test_palabras_desconocidas_distinguen():
             != clave_producto("Huawei Watch 5 Pro, 46 mm", "relojes"))
 
 
-def test_5g_distingue():
-    assert (clave_producto("Xiaomi Redmi 15C 5G, Verde, 128GB", "moviles")
-            != clave_producto("Xiaomi Redmi 15C, Verde, 128GB", "moviles"))
+def test_5g_no_distingue():
+    # Decisión: muchas tiendas añaden "5G" a modelos que solo existen en 5G (S26 Ultra),
+    # así que no forma parte de la clave. Donde sí es variante (Redmi 15C / 15C 5G) la
+    # diferencia de precio es pequeña y nunca dispara la regla de aviso.
+    assert (clave_producto("Samsung Galaxy S26 Ultra 5G 12GB 256GB 6.9\" Negro", "moviles")
+            == clave_producto("Samsung Galaxy S26 Ultra 256 GB", "moviles"))
 
 
 def test_reloj_tamano_y_lte():

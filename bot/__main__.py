@@ -60,11 +60,27 @@ async def _ciclo(args, cfg: dict) -> int:
         db.cerrar()
         await http.cerrar()
     caidas = [r.tienda for r in resumen.tiendas if not r.ok]
+    _resumen_actions(resumen, http.peticiones, time.monotonic() - inicio)
     log.info("Fin del ciclo en %.1fs: %d peticiones, %d variantes publicadas, "
              "%d candidatos, %d avisos, caídas: %s", time.monotonic() - inicio,
              http.peticiones, n, resumen.candidatos, resumen.avisos_enviados,
              ", ".join(caidas) or "ninguna")
     return 0
+
+
+def _resumen_actions(resumen, peticiones: int, segundos: float) -> None:
+    """Tabla por tienda en el resumen del run de GitHub Actions."""
+    ruta = os.environ.get("GITHUB_STEP_SUMMARY")
+    if not ruta:
+        return
+    filas = [f"| {r.tienda} | {'✅' if r.ok else '❌ ' + r.error[:80]} | {r.productos} | "
+             f"{r.descartados} | {r.segundos} |" for r in resumen.tiendas]
+    with open(ruta, "a", encoding="utf-8") as f:
+        f.write("\n".join([
+            f"### Ciclo: {segundos:.0f} s, {peticiones} peticiones, "
+            f"{resumen.candidatos} candidatos, {resumen.avisos_enviados} avisos", "",
+            "| Tienda | Estado | Válidos | Descartados | Segundos |",
+            "|---|---|---|---|---|", *filas, ""]))
 
 
 async def _simular(cfg: dict) -> int:

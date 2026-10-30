@@ -1,0 +1,88 @@
+# Ciclo completo cada 15 minutos: vigila tiendas, manda avisos, guarda el historial
+# en la rama `datos` y publica la web en GitHub Pages.
+name: ciclo
+on:
+  schedule:
+    - cron: "*/15 * * * *"   # GitHub puede retrasarlo varios minutos en horas punta
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ["bot/**", "site/**", "config.yaml", ".github/workflows/ciclo.yml"]
+
+concurrency:
+  group: ciclo
+  cancel-in-progress: false   # nunca dos ciclos a la vez; el siguiente espera
+
+permissions:
+  contents: write    # subir el historial a la rama datos
+  actions: write     # mantener vivo el cron (ver último paso)
+  pages: write
+  id-token: write
+
+jobs:
+  ciclo:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Recuperar historial (rama datos)
+        run: |
+          mkdir -p datos
+          if git ls-remote --exit-code --heads origin datos >/dev/null; then
+            git fetch --depth 1 origin datos
+            git show FETCH_HEAD:historial.sqlite > datos/historial.sqlite
+            echo "Historial recuperado: $(du -h datos/historial.sqlite | cut -f1)"
+          else
+            echo "Primera ejecución: no hay historial todavía"
+          fi
+
+      - uses: astral-sh/setup-uv@v6
+
+      - name: Ejecutar ciclo
+        env:
+          SMTP_USER: ${{ secrets.SMTP_USER }}
+          SMTP_PASS: ${{ secrets.SMTP_PASS }}
+          EMAIL_TO: ${{ secrets.EMAIL_TO }}
+        run: uv run python -m bot ciclo
+
+      - name: Guardar historial (un único commit sobrescrito)
+        if: always() && hashFiles('datos/historial.sqlite') != ''
+        env:
+          TOKEN: ${{ github.token }}
+        run: |
+          cd datos
+          git init -q -b datos
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add historial.sqlite
+          git commit -q -m "Historial $(date -u +%Y-%m-%dT%H:%MZ)"
+          git push -q -f "https://x-access-token:${TOKEN}@github.com/${GITHUB_REPOSITORY}.git" datos
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+      - name: Mantener vivo el cron (una vez al día)
+        # GitHub desactiva los workflows programados tras 60 días sin actividad;
+        # volver a habilitarlo por la API reinicia ese plazo.
+        if: github.event_name == 'schedule'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [ "$(date -u +%H%M)" -lt 0020 ]; then
+            curl -fsS -X PUT -H "Authorization: Bearer $GH_TOKEN" \
+              -H "Accept: application/vnd.github+json" \
+              "https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/workflows/ciclo.yml/enable"
+            echo "Workflow re-habilitado (keepalive)"
+          fi
+
+  publicar:
+    needs: ciclo
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.despliegue.outputs.page_url }}
+    steps:
+      - id: despliegue
+        uses: actions/deploy-pages@v4
